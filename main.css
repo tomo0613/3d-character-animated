@@ -1,0 +1,26 @@
+@charset "UTF-8";
+
+body {
+    margin: 0;
+    user-select: none;
+    background-color: rgb(58, 65, 54);
+}
+
+canvas {
+    display: flex;
+    margin: auto;
+    border: 1px solid black;
+    cursor: grab;
+}
+
+#animation-controller-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5em;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+input, label {
+    cursor: pointer;
+}
