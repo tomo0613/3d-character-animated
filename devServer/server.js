@@ -1,9 +1,15 @@
 const FileSystem = require('fs');
 const HTTP = require('http');
 const ChildProcess = require('child_process');
+const Path = require('path');
+
+const {resolveImports} = require('./moduleImportResolver');
+
+const tsConfigJson = JSON.parse(FileSystem.readFileSync(Path.join(process.cwd(), 'tsconfig.json')).toString());
+const devBuildFolder = tsConfigJson.compilerOptions.outDir;
 
 const port = process.env.PORT || 3000;
-const workingFolder = process.env.WATCH || './';
+const folderBeingWatched = process.env.WATCH;
 
 const httpServer = HTTP.createServer(requestListener);
 
@@ -17,28 +23,28 @@ httpServer.listen(port, () => {
     openBrowser();
 });
 
+if (folderBeingWatched) {
+    watchFolder(folderBeingWatched, (changedFiles) => {
+        console.info('files changed:\n\t' + Array.from(changedFiles.values()).join('\n\t'));
 
-watchFolder(workingFolder, (changedFiles) => {
-    console.info('files changed:\n\t' + Array.from(changedFiles.values()).join('\n\t'));
+        if (!browserConnected) {
+            return;
+        }
 
-    if (!browserConnected) {
-        return;
-    }
+        dispatchEvent('reload');
+        changedFiles.clear();
 
-    dispatchEvent('reload');
-    changedFiles.clear();
-
-    reloadTimeoutId = setTimeout(() => {
-        console.info('pending reload');
-        reloadPending = true;
-    }, 250);
-});
+        reloadTimeoutId = setTimeout(() => {
+            console.info('pending reload');
+            reloadPending = true;
+        }, 250);
+    });
+}
 
 function requestListener(incomingMessage, serverResponse) {
     switch (incomingMessage.url) {
         case '/sse':
             browserConnected = true;
-            // browser [re]connected & clear timeout for reloads & send reload event if pending
             clearTimeout(reloadTimeoutId);
             initSSE(serverResponse);
 
@@ -51,19 +57,26 @@ function requestListener(incomingMessage, serverResponse) {
             serveIndexFile(serverResponse);
             return;
         default:
-            // console.info(`serve: "${incomingMessage.url}"`);
             serveFile(`.${incomingMessage.url}`, serverResponse);
     }
 }
 
 async function serveIndexFile(response) {
-    const [indexFile, browserReloadScript] = await Promise.all([
-        readFile('./index.html'),
-        readFile(__dirname + '/browserReloadListener.js'),
-    ]);
+    const filePathsToRead = ['./index.html'];
+    if (folderBeingWatched) {
+        filePathsToRead.push(Path.join(__dirname, 'browserReloadListener.js'));
+    }
 
-    const scriptToInject = `<body>\n\t<script>\n${browserReloadScript.toString()}\t</script>`;
-    const fileContent = indexFile.toString().replace('<body>', scriptToInject);
+    const [indexFile, browserReloadScript] = await Promise.all(filePathsToRead.map((path) => readFile(path)));
+    let fileContent = indexFile.toString();
+
+    if (browserReloadScript) {
+        const scriptToInject = `<body>\n\t<script>\n${browserReloadScript.toString()}\t</script>`;
+        fileContent = fileContent.replace('<body>', scriptToInject);
+    }
+    if (devBuildFolder) {
+        fileContent = fileContent.replace('./build/', `./${devBuildFolder}/`);
+    }
 
     response.setHeader('Content-Type', 'text/html');
     response.end(fileContent);
@@ -73,8 +86,13 @@ async function serveFile(filePath, response) {
     let fileContent;
 
     try {
+        const extension = filePath.split('.').pop();
         fileContent = await readFile(filePath);
-        response.setHeader('Content-Type', getContentTypeByExtension(filePath.split('.').pop()));
+        response.setHeader('Content-Type', getContentTypeByExtension(extension));
+
+        if (resolveImports && extension === 'js') {
+            fileContent = resolveImports(fileContent.toString());
+        }
     } catch (error) {
         console.error(`can not serve file: ${error.path}`);
     } finally {
@@ -147,6 +165,8 @@ function readDirectory(path) {
 }
 
 function readFile(filePath, options) {
+    console.log('readFile: ', filePath);
+    
     return new Promise((resolve, reject) => {
         FileSystem.readFile(filePath, options, (error, data) => {
             if (error) {
@@ -188,7 +208,7 @@ function debounce(fnc, delay = 200, immediate = false) {
 function openBrowser(browser = 'firefox') {
     const isWindows = process.platform.includes('win');
     const browserPaths = {
-        firefox: isWindows ? 'C:\\Program Files\\Mozilla Firefox\\firefox.exe' : 'firefox',
+        firefox: isWindows ? Path.join('C:', 'Program Files', 'Mozilla Firefox', 'firefox.exe') : 'firefox',
     };
 
     console.info('Opening browser');

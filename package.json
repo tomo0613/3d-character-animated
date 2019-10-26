@@ -1,15 +1,36 @@
 {
   "name": "3d-character-animated",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomo0613/3d-character-animated.git"
+  },
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "build/main.js",
   "scripts": {
-    "start": "node ./devServer/server.js",
+    "start": "./runDev.sh",
+    "startDevServer": "WATCH='./build-tmp' node ./devServer/server.js",
+    "startTSCompiler": "npx tsc -w",
+    "build": "npx rollup -c",
+    "lint": "eslint src/** --ext .ts",
+    "lint:fix": "npm run lint --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": ":)",
   "license": "ISC",
   "dependencies": {
     "three": "^0.109.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^2.5.0",
+    "@typescript-eslint/parser": "^2.5.0",
+    "eslint": "^6.5.1",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.2",
+    "rollup": "^1.25.2",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-terser": "^5.1.2",
+    "rollup-plugin-typescript2": "^0.24.3",
+    "typescript": "^3.6.4"
   }
 }

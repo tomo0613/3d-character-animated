@@ -1,12 +1,24 @@
-import * as THREE from './node_modules/three/build/three.module.js';
-import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from './node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-import { FBXLoader } from './node_modules/three/examples/jsm/loaders/FBXLoader.js';
-import CONFIG from './config.js';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import CONFIG from './config';
 
-window.paused = false;
+let paused = false;
 
-(async function init() {
+
+window.addEventListener('DOMContentLoaded', async () => {
+    const handlers = await init();
+
+    window.addEventListener('keyup', (e) => {
+        if (e.key.toUpperCase() === 'P') {
+            paused = !paused;
+            handlers.onPause();
+        }
+    });
+});
+
+async function init() {
     const clock = new THREE.Clock();
     const renderer = new THREE.WebGLRenderer({alpha: CONFIG.transparentBackground, antialias: CONFIG.antialias});
     renderer.gammaFactor = 2.2;
@@ -16,11 +28,15 @@ window.paused = false;
     renderer.setSize(CONFIG.viewWidth, CONFIG.viewHeight);
     document.body.appendChild(renderer.domElement);
 
+    const camera = new THREE.PerspectiveCamera(CONFIG.fieldOfView, CONFIG.aspectRatio, CONFIG.cameraNear, CONFIG.cameraFar);
+    initCamera(camera);
     const scene = new THREE.Scene();
     buildEnvironment(scene);
 
-    const character = await loadModel('./3D-Objects/Paladin.fbx');
-    character.traverse((node) => {
+    const character = await loadModel('assets/3D-Objects/Paladin.fbx') as THREE.Group;
+
+    // ToDo types
+    character.traverse((node: any) => {
         if (node.material) {
             node.material.side = THREE.DoubleSide;
         }
@@ -31,54 +47,34 @@ window.paused = false;
     });
     scene.add(character);
 
-    const _animationMixer = new THREE.AnimationMixer(character);
-    initCharacterAnimationController(_animationMixer, character);
+    const animationMixer = new THREE.AnimationMixer(character);
+    initCharacterAnimationController(animationMixer, character);
+
+    function render() {
+        if (paused) {
+            return;
+        }
+        animationMixer.update(clock.getDelta());
     
-    const renderContext = {
-        _animationMixer,
-        _renderer: renderer,
-        _scene: scene,
-        _camera: initCamera(),
-        _clock: clock,
+        renderer.render(scene, camera);
+    
+        requestAnimationFrame(render);
     };
-    const _render = render.bind(renderContext);
-    renderContext._render = _render;
-    const handlers = {
+    render();
+
+    return {
         onPause: () => {
-            if (window.paused) {
+            if (paused) {
                 clock.stop();
             } else {
                 clock.start();
-                _render();
+                render();
             }
         },
     };
-
-    _render();
-
-    return handlers;
-})().then((handlers) => {
-    window.addEventListener('keyup', (e) => {
-        if (e.key.toUpperCase() === 'P') {
-            window.paused = !window.paused;
-            handlers.onPause();
-        }
-    });
-});
-
-function render() {
-    if (window.paused) {
-        return;
-    }
-    this._animationMixer.update(this._clock.getDelta());
-
-    this._renderer.render(this._scene, this._camera);
-
-    requestAnimationFrame(this._render);
 }
 
-function initCamera() {
-    const camera = new THREE.PerspectiveCamera(CONFIG.fieldOfView, CONFIG.aspectRatio, CONFIG.cameraNear, CONFIG.cameraFar);
+function initCamera(camera: THREE.PerspectiveCamera) {
     const cameraController = new OrbitControls(camera);
     
     camera.position.x = -25;
@@ -87,11 +83,9 @@ function initCamera() {
     cameraController.target = new THREE.Vector3(0, 10, 0);
     cameraController.minDistance = 2;
     cameraController.update();
-
-    return camera;
 }
 
-function initCharacterAnimationController(animationMixer, character) {
+function initCharacterAnimationController(animationMixer: THREE.AnimationMixer, character) {
     const controllerContainer = Object.assign(document.createElement('aside'), {id: 'animation-controller-container'});
     const animations = character.animations.filter(animation => !/^Armature\|\w+/.test(animation.name));
 
@@ -145,14 +139,15 @@ function buildEnvironment(scene) {
     groundPlane.receiveShadow = CONFIG.renderShadows;
     scene.add(groundPlane);
     
-    const grid = new THREE.GridHelper(2000, 20, 0x000000, 0x000000);
+    // ToDo types 
+    const grid: any = new THREE.GridHelper(2000, 20, 0x000000, 0x000000);
     grid.material.opacity = 0.2;
     grid.material.transparent = true;
     scene.add(grid);
 }
 
-function loadModel(resourceUrl) {
-    let loader;
+function loadModel(resourceUrl: string) {
+    let loader: FBXLoader|GLTFLoader;
     const extension = resourceUrl.split('.').pop().toUpperCase();
 
     switch (extension) {
