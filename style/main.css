@@ -1,8 +1,13 @@
 @charset "UTF-8";
 
+:root {
+    --fade-out-duration: 1s;
+}
+
 body {
     margin: 0;
     user-select: none;
+    -webkit-user-select: none;
     background-color: rgb(58, 65, 54);
 }
 
@@ -23,4 +28,30 @@ canvas {
 
 input, label {
     cursor: pointer;
+}
+
+.progress-display-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: antiquewhite;
+}
+
+.visible {
+    opacity: 1;
+}
+
+.fade-out {
+    opacity: 0;
+    transition: opacity var(--fade-out-duration) ease-in-out;
+}
+
+@keyframes spin {
+    from  {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
 }

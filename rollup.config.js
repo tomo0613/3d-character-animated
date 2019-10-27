@@ -6,7 +6,7 @@ import {terser} from 'rollup-plugin-terser';
 export default {
     input: 'src/main.ts',
     output: {
-        file: './build/rollup-bundle.js',
+        file: './build/main.js',
         format: 'esm',
     },
     plugins: [

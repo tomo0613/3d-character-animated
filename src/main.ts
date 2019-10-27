@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import CONFIG from './config';
+import utils from './utils';
 
 let paused = false;
-
 
 window.addEventListener('DOMContentLoaded', async () => {
     const handlers = await init();
@@ -33,7 +31,7 @@ async function init() {
     const scene = new THREE.Scene();
     buildEnvironment(scene);
 
-    const character = await loadModel('assets/3D-Objects/Paladin.fbx') as THREE.Group;
+    const character = await utils.loadModel('assets/3D-Objects/Paladin.fbx') as THREE.Group;
 
     // ToDo types
     character.traverse((node: any) => {
@@ -144,33 +142,4 @@ function buildEnvironment(scene) {
     grid.material.opacity = 0.2;
     grid.material.transparent = true;
     scene.add(grid);
-}
-
-function loadModel(resourceUrl: string) {
-    let loader: FBXLoader|GLTFLoader;
-    const extension = resourceUrl.split('.').pop().toUpperCase();
-
-    switch (extension) {
-        case 'GLB':
-        case 'GLTF':
-            loader = new GLTFLoader();
-            break;
-        case 'FBX':
-            loader = new FBXLoader();
-            break;
-        default:
-            console.error(`Failed to load resource: "${resourceUrl}" due it has unknown extension`);
-            return Promise.reject(null);
-    }
-
-    return new Promise((resolve, reject) => {
-        const onLoad = (resource) => resolve(resource);
-        const onProgress = () => {};
-        const onError = (e) => {
-            console.error('Failed to load resource: ' + e);
-            reject(e);
-        };
-
-        loader.load(resourceUrl, onLoad, onProgress, onError);
-    });
 }
