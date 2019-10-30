@@ -1,4 +1,3 @@
-
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader';
 
@@ -61,19 +60,19 @@ function loadModel(resourceUrl: string) {
     }
 
     function updateProgressDisplay(total: number, loaded: number) {
-        progressDisplay.textContent = `Loading model: ${resourceUrl} (${scaleBytes(loaded, 'M')} / ${scaleBytes(total, 'M')}MB)`;
+        progressDisplay.textContent = `Loading model: ${resourceUrl} (${bytesToReadable(loaded, 'M')} / ${bytesToReadable(total, 'M')}MB)`;
     }
 
     function removeProgressDisplay() {
         progressDisplay.classList.add('fade-out');
-        window.setTimeout(() => {
+        progressDisplay.addEventListener('transitionend', () => {
             progressDisplayContainer.removeChild(progressDisplay);
             progressDisplay = null;
-        }, 1000);
+        });
     }
 }
 
-function scaleBytes(value: number, scale: 'k'|'M'|'G'|'T') {
+function bytesToReadable(value: number, scale: 'k'|'M'|'G'|'T') {
     const n = ['k', 'M', 'G', 'T'].indexOf(scale) + 1;
 
     for (let i = 0; i < n; i++) {

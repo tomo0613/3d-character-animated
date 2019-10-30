@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import CONFIG from './config';
 import utils from './utils';
+import {AnimationHandler} from './animationHandler';
+
+type FBX = THREE.Group & {
+    animations: THREE.AnimationClip[]
+};
 
 let paused = false;
 
@@ -31,10 +36,9 @@ async function init() {
     const scene = new THREE.Scene();
     buildEnvironment(scene);
 
-    const character = await utils.loadModel('assets/3D-Objects/Paladin.fbx') as THREE.Group;
+    const character = await utils.loadModel('assets/3D-Objects/Paladin.fbx') as FBX;
 
-    // ToDo types
-    character.traverse((node: any) => {
+    character.traverse((node: any/* THREE.Object3D & THREE.Mesh*/) => {
         if (node.material) {
             node.material.side = THREE.DoubleSide;
         }
@@ -46,7 +50,7 @@ async function init() {
     scene.add(character);
 
     const animationMixer = new THREE.AnimationMixer(character);
-    initCharacterAnimationController(animationMixer, character);
+    initCharacterAnimationController(animationMixer);
 
     function render() {
         if (paused) {
@@ -83,31 +87,34 @@ function initCamera(camera: THREE.PerspectiveCamera) {
     cameraController.update();
 }
 
-function initCharacterAnimationController(animationMixer: THREE.AnimationMixer, character) {
-    const controllerContainer = Object.assign(document.createElement('aside'), {id: 'animation-controller-container'});
-    const animations = character.animations.filter(animation => !/^Armature\|\w+/.test(animation.name));
-
-    animations.forEach((animation, index) => {
-        const button = Object.assign(
-            document.createElement('input'),
-            {type: 'radio', name: 'animation', id: animation.name, value: index, onchange: onChange},
-        );
-        const label = Object.assign(document.createElement('label'), {textContent: animation.name});
-        label.setAttribute('for', button.id);
-        const input = document.createElement('div');
-        input.appendChild(button);
-        input.appendChild(label);
-        controllerContainer.appendChild(input);
-        document.body.appendChild(controllerContainer);
+function initCharacterAnimationController(animationMixer: THREE.AnimationMixer) {
+    const animationHandler = new AnimationHandler(animationMixer, {
+        default: 'idle_passive',
     });
 
-    function onChange(e) {
-        const selectedAnimation = animations[e.currentTarget.value];
-        animationMixer.stopAllAction()
-        animationMixer.clipAction(selectedAnimation).play();
-    }
+    const controllerContainer = Object.assign(document.createElement('aside'), {id: 'animation-controller-container'});
+    const animations = (<FBX>animationMixer.getRoot()).animations.filter(animation => !/^Armature\|\w+/.test(animation.name));
 
-    animationMixer.clipAction(animations.find(animation => animation.name === 'idle_bored')).play();
+    animations.forEach((animation) => {
+        const button = Object.assign(
+            document.createElement('button'),
+            {textContent: animation.name, onclick: onClick},
+        );
+        button.dataset.animation_name = animation.name;
+        controllerContainer.appendChild(button);
+    });
+    document.body.appendChild(controllerContainer);
+
+    animationHandler.playDefault();
+
+    function onClick({currentTarget}: MouseEvent & {currentTarget: HTMLButtonElement}) {
+        currentTarget.disabled = true;
+      
+        animationHandler.playOnce(currentTarget.dataset.animation_name).then(() => {
+            currentTarget.disabled = false;
+            animationHandler.playDefault();
+        });
+    }
 }
 
 function buildEnvironment(scene) {

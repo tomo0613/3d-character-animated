@@ -1,7 +1,7 @@
 @charset "UTF-8";
 
 :root {
-    --fade-out-duration: 1s;
+    --fade-out-duration: 3s;
 }
 
 body {
@@ -26,16 +26,23 @@ canvas {
     background-color: rgba(255, 255, 255, 0.5);
 }
 
-input, label {
+button {
     cursor: pointer;
+    display: block;
+    width: 100%;
 }
 
-.progress-display-container {
+#progress-display-container {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+.progress-display {
     color: antiquewhite;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 1rem;
 }
 
 .visible {
@@ -45,13 +52,4 @@ input, label {
 .fade-out {
     opacity: 0;
     transition: opacity var(--fade-out-duration) ease-in-out;
-}
-
-@keyframes spin {
-    from  {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
 }
