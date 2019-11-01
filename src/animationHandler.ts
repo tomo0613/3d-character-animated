@@ -1,10 +1,10 @@
-type AnimationLoopEvent = THREE.Event & {action: THREE.AnimationAction, loopDelta: number};
+type AnimationLoopEvent = THREE.Event & {action: THREE.AnimationAction; loopDelta: number};
 
 interface AnimationHandlerConfig {
     default: string;
 }
 
-const crossFadeDuration = 1;
+const crossFadeDuration = 0.3;
 
 export class AnimationHandler {
     private mixer: THREE.AnimationMixer;
@@ -16,11 +16,26 @@ export class AnimationHandler {
         this.defaultAnimationAction = this.getAnimationActionByName(config.default);
     }
 
+    // ToDo keyof config...
+    play = (animationName: string) => {
+        const animationAction = this.getAnimationActionByName(animationName);
+
+        this.start(animationAction);
+        this.defaultAnimationAction.crossFadeTo(animationAction, crossFadeDuration, false);
+
+        return () => {
+            this.playDefault();
+            this.defaultAnimationAction.crossFadeFrom(animationAction, crossFadeDuration, false);
+        };
+        // return new Promise((resolve) => {
+        //     // this.?.addEventListener(arg[1]);
+        // });
+    }
+
     playDefault = () => {
         this.start(this.defaultAnimationAction);
     }
 
-    // ToDo keyof config...
     playOnce = (animationName: string) => {
         const animationAction = this.getAnimationActionByName(animationName);
 
@@ -33,8 +48,11 @@ export class AnimationHandler {
                     return;
                 }
                 this.mixer.removeEventListener('loop', animationRepeatListener);
-                
+
                 animationAction.stop();
+                this.playDefault();
+                // this.defaultAnimationAction.crossFadeFrom(animationAction, crossFadeDuration, false);
+                // animationAction.crossFadeTo(this.defaultAnimationAction, 1, false);
                 resolve();
             };
             this.mixer.addEventListener('loop', animationRepeatListener);
@@ -49,8 +67,7 @@ export class AnimationHandler {
         animationAction.play();
     }
 
-    // ToDo keyof config...
     private getAnimationActionByName(animationName: string) {
-        return (<any>this.mixer.clipAction)(animationName) as THREE.AnimationAction;
+        return (this.mixer.clipAction as any)(animationName) as THREE.AnimationAction;
     }
 }

@@ -166,7 +166,7 @@ function readDirectory(path) {
 
 function readFile(filePath, options) {
     console.log('readFile: ', filePath);
-    
+
     return new Promise((resolve, reject) => {
         FileSystem.readFile(filePath, options, (error, data) => {
             if (error) {

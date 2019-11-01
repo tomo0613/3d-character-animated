@@ -1,7 +1,7 @@
-import rollup_ts from 'rollup-plugin-typescript2';
-import typescript from 'typescript';
 import node_resolve from 'rollup-plugin-node-resolve';
-import {terser} from 'rollup-plugin-terser';
+import rollup_ts from 'rollup-plugin-typescript2';
+import { terser } from 'rollup-plugin-terser';
+import typescript from 'typescript';
 
 export default {
     input: 'src/main.ts',
@@ -10,8 +10,8 @@ export default {
         format: 'esm',
     },
     plugins: [
-        rollup_ts({typescript}),
-        node_resolve({only: 'three'}),
+        rollup_ts({ typescript }),
+        node_resolve({ only: 'three' }),
         terser(),
     ],
 };

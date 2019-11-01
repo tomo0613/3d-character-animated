@@ -1,5 +1,5 @@
-import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader';
-import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 const progressDisplayContainer = document.getElementById('progress-display-container');
 
@@ -22,23 +22,22 @@ function loadModel(resourceUrl: string) {
             loader = new FBXLoader();
             break;
         default:
-            console.error(`Failed to load resource: "${resourceUrl}" due it has unknown extension`);
-            return Promise.reject(null);
+            return Promise.reject(new Error(`Failed to load resource: "${resourceUrl}" due it has unknown extension`));
     }
 
     return new Promise((resolve, reject) => {
         const onLoad = (resource) => {
-            resolve(resource)
+            resolve(resource);
         };
         const onError = (e) => {
-            console.error('Failed to load resource: ' + e);
+            console.error(`Failed to load resource: ${e}`);
             reject(e);
         };
 
         loader.load(resourceUrl, onLoad, onProgress, onError);
     });
 
-    function onProgress({total, loaded}: ProgressEvent) {
+    function onProgress({ total, loaded }: ProgressEvent) {
         finished = total === loaded;
 
         if (!progressDisplay) {
@@ -49,7 +48,6 @@ function loadModel(resourceUrl: string) {
             if (progressDisplay) {
                 removeProgressDisplay();
             }
-            return;
         }
     }
 
@@ -60,7 +58,9 @@ function loadModel(resourceUrl: string) {
     }
 
     function updateProgressDisplay(total: number, loaded: number) {
-        progressDisplay.textContent = `Loading model: ${resourceUrl} (${bytesToReadable(loaded, 'M')} / ${bytesToReadable(total, 'M')}MB)`;
+        progressDisplay.textContent = `\
+            Loading model: ${resourceUrl} (${bytesToReadable(loaded, 'M')} / ${bytesToReadable(total, 'M')}MB)\
+        `;
     }
 
     function removeProgressDisplay() {
@@ -79,5 +79,5 @@ function bytesToReadable(value: number, scale: 'k'|'M'|'G'|'T') {
         value /= 1020;
     }
 
-    return value.toFixed(2)
+    return value.toFixed(2);
 }

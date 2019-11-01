@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { AnimationHandler } from './animationHandler';
 import CONFIG from './config';
 import utils from './utils';
-import {AnimationHandler} from './animationHandler';
 
 type FBX = THREE.Group & {
-    animations: THREE.AnimationClip[]
+    animations: THREE.AnimationClip[];
 };
 
 let paused = false;
@@ -23,7 +23,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function init() {
     const clock = new THREE.Clock();
-    const renderer = new THREE.WebGLRenderer({alpha: CONFIG.transparentBackground, antialias: CONFIG.antialias});
+    const renderer = new THREE.WebGLRenderer({ alpha: CONFIG.transparentBackground, antialias: CONFIG.antialias });
     renderer.gammaFactor = 2.2;
     renderer.gammaOutput = true;
     renderer.shadowMap.enabled = CONFIG.renderShadows;
@@ -31,14 +31,25 @@ async function init() {
     renderer.setSize(CONFIG.viewWidth, CONFIG.viewHeight);
     document.body.appendChild(renderer.domElement);
 
-    const camera = new THREE.PerspectiveCamera(CONFIG.fieldOfView, CONFIG.aspectRatio, CONFIG.cameraNear, CONFIG.cameraFar);
+    const camera = new THREE.PerspectiveCamera(
+        CONFIG.fieldOfView,
+        CONFIG.aspectRatio,
+        CONFIG.cameraNear,
+        CONFIG.cameraFar,
+    );
     initCamera(camera);
     const scene = new THREE.Scene();
     buildEnvironment(scene);
 
-    const character = await utils.loadModel('assets/3D-Objects/Paladin.fbx') as FBX;
+    let characterModel: FBX;
 
-    character.traverse((node: any/* THREE.Object3D & THREE.Mesh*/) => {
+    try {
+        characterModel = await utils.loadModel('assets/3D-Objects/Paladin.fbx') as FBX;
+    } catch (e) {
+        console.error(e);
+    }
+
+    characterModel.traverse((node: any/* THREE.Object3D & THREE.Mesh */) => {
         if (node.material) {
             node.material.side = THREE.DoubleSide;
         }
@@ -47,9 +58,9 @@ async function init() {
             node.receiveShadow = true;
         }
     });
-    scene.add(character);
+    scene.add(characterModel);
 
-    const animationMixer = new THREE.AnimationMixer(character);
+    const animationMixer = new THREE.AnimationMixer(characterModel);
     initCharacterAnimationController(animationMixer);
 
     function render() {
@@ -57,11 +68,11 @@ async function init() {
             return;
         }
         animationMixer.update(clock.getDelta());
-    
+
         renderer.render(scene, camera);
-    
+
         requestAnimationFrame(render);
-    };
+    }
     render();
 
     return {
@@ -78,12 +89,12 @@ async function init() {
 
 function initCamera(camera: THREE.PerspectiveCamera) {
     const cameraController = new OrbitControls(camera);
-    
-    camera.position.x = -25;
+
+    camera.position.x = -30;
     camera.position.y = 20;
 
     cameraController.target = new THREE.Vector3(0, 10, 0);
-    cameraController.minDistance = 2;
+    cameraController.minDistance = 10;
     cameraController.update();
 }
 
@@ -92,13 +103,17 @@ function initCharacterAnimationController(animationMixer: THREE.AnimationMixer) 
         default: 'idle_passive',
     });
 
-    const controllerContainer = Object.assign(document.createElement('aside'), {id: 'animation-controller-container'});
-    const animations = (<FBX>animationMixer.getRoot()).animations.filter(animation => !/^Armature\|\w+/.test(animation.name));
+    const controllerContainer = Object.assign(
+        document.createElement('aside'),
+        { id: 'animation-controller-container' },
+    );
+    const animations = (animationMixer.getRoot() as FBX).animations
+        .filter((animation) => !/^Armature\|\w+/.test(animation.name));
 
     animations.forEach((animation) => {
         const button = Object.assign(
             document.createElement('button'),
-            {textContent: animation.name, onclick: onClick},
+            { textContent: animation.name, onclick: onClick },
         );
         button.dataset.animation_name = animation.name;
         controllerContainer.appendChild(button);
@@ -107,14 +122,23 @@ function initCharacterAnimationController(animationMixer: THREE.AnimationMixer) 
 
     animationHandler.playDefault();
 
-    function onClick({currentTarget}: MouseEvent & {currentTarget: HTMLButtonElement}) {
+    function onClick({ currentTarget }: MouseEvent & {currentTarget: HTMLButtonElement}) {
         currentTarget.disabled = true;
-      
+
         animationHandler.playOnce(currentTarget.dataset.animation_name).then(() => {
             currentTarget.disabled = false;
-            animationHandler.playDefault();
         });
     }
+
+    let animationTerminator = null;
+    window.addEventListener('keyup', (e) => {
+        if (e.key.toUpperCase() === 'W' && !animationTerminator) {
+            animationTerminator = animationHandler.play('walk');
+        } else if (animationTerminator) {
+            animationTerminator();
+            animationTerminator = null;
+        }
+    });
 }
 
 function buildEnvironment(scene) {
@@ -124,7 +148,7 @@ function buildEnvironment(scene) {
     const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444);
     ambientLight.position.set(0, 200, 0);
     scene.add(ambientLight);
-    
+
     const light = new THREE.DirectionalLight(0xffffff);
     light.position.set(0, 200, 100);
     light.castShadow = CONFIG.renderShadows;
@@ -138,13 +162,13 @@ function buildEnvironment(scene) {
 
     const groundPlane = new THREE.Mesh(
         new THREE.PlaneBufferGeometry(2000, 2000),
-        new THREE.MeshPhongMaterial({color: 0x444444, depthWrite: false}),
+        new THREE.MeshPhongMaterial({ color: 0x444444, depthWrite: false }),
     );
     groundPlane.rotation.x = -Math.PI / 2;
     groundPlane.receiveShadow = CONFIG.renderShadows;
     scene.add(groundPlane);
-    
-    // ToDo types 
+
+    // ToDo types
     const grid: any = new THREE.GridHelper(2000, 20, 0x000000, 0x000000);
     grid.material.opacity = 0.2;
     grid.material.transparent = true;
