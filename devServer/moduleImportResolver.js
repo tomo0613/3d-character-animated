@@ -1,8 +1,16 @@
+const utils = require('./utils');
+
+const tsConfig = utils.readTsConfig();
+const devBuildFolder = tsConfig.compilerOptions.outDir;
+
+const rootFolderRegExp = new RegExp(`.*${devBuildFolder}/`);
+
+let nodeModulesPath = '../node_modules';
+
 module.exports = {
     resolveImports,
 };
 
-const nodeModulesPath = '../node_modules';
 const nodeModuleResolutions = {
     three: 'three/build/three.module',
 };
@@ -10,7 +18,15 @@ const nodeModulesRegExp = new RegExp(`^(${Object.keys(nodeModuleResolutions).joi
 const importRegExp = /(import.+from) ('|")(.+)('|")/g;
 const extensionRegExp = /\.js$/;
 
-function resolveImports(fileContentString) {
+function setNodeModulesPath(filePath) {
+    const directoryDepth = filePath.replace(rootFolderRegExp, '').split('/').length;
+
+    nodeModulesPath = '../'.repeat(directoryDepth) + 'node_modules';
+}
+
+function resolveImports(fileContentString, filePath) {
+    setNodeModulesPath(filePath);
+
     return fileContentString.replace(importRegExp, alterModuleResolution);
 }
 

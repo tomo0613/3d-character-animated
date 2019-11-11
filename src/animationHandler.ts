@@ -6,7 +6,7 @@ interface AnimationHandlerConfig {
 
 const crossFadeDuration = 0.3;
 
-export class AnimationHandler {
+export default class AnimationHandler {
     private mixer: THREE.AnimationMixer;
     private defaultAnimationAction: THREE.AnimationAction;
 

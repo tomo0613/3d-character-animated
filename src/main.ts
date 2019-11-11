@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { AnimationHandler } from './animationHandler';
+
+import AnimationHandler from './animationHandler';
 import CONFIG from './config';
+import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
 
 type FBX = THREE.Group & {
@@ -58,28 +60,42 @@ async function init() {
             node.receiveShadow = true;
         }
     });
+    const characterCollisionBody = physicsSimulator.obtainCollisionBody();
+    // characterCollisionBody.velocity.set(2, 0);
+
+    function applyPhysics() {
+        characterModel.position.set(characterCollisionBody.position.x, characterCollisionBody.position.y, 0);
+        // characterModel.rotation.setFromVector3()
+    }
+
     scene.add(characterModel);
 
     const animationMixer = new THREE.AnimationMixer(characterModel);
     initCharacterAnimationController(animationMixer);
 
-    function render() {
+    function render(elapsedTime = performance.now()) {
         if (paused) {
             return;
         }
+        physicsSimulator.step(elapsedTime);
+        applyPhysics();
         animationMixer.update(clock.getDelta());
 
         renderer.render(scene, camera);
 
         requestAnimationFrame(render);
     }
+
+    physicsSimulator.start();
     render();
 
     return {
         onPause: () => {
             if (paused) {
+                physicsSimulator.stop();
                 clock.stop();
             } else {
+                physicsSimulator.start();
                 clock.start();
                 render();
             }

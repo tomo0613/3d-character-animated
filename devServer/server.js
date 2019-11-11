@@ -3,10 +3,11 @@ const HTTP = require('http');
 const ChildProcess = require('child_process');
 const Path = require('path');
 
-const {resolveImports} = require('./moduleImportResolver');
+const { resolveImports } = require('./moduleImportResolver');
+const utils = require('./utils');
 
-const tsConfigJson = JSON.parse(FileSystem.readFileSync(Path.join(process.cwd(), 'tsconfig.json')).toString());
-const devBuildFolder = tsConfigJson.compilerOptions.outDir;
+const tsconfig = utils.readTsconfig();
+const devBuildFolder = tsconfig.compilerOptions.outDir;
 
 const port = process.env.PORT || 3000;
 const folderBeingWatched = process.env.WATCH;
@@ -25,7 +26,7 @@ httpServer.listen(port, () => {
 
 if (folderBeingWatched) {
     watchFolder(folderBeingWatched, (changedFiles) => {
-        console.info('files changed:\n\t' + Array.from(changedFiles.values()).join('\n\t'));
+        console.info(`files changed:\n\t${Array.from(changedFiles.values()).join('\n\t')}`);
 
         if (!browserConnected) {
             return;
@@ -67,16 +68,14 @@ async function serveIndexFile(response) {
         filePathsToRead.push(Path.join(__dirname, 'browserReloadListener.js'));
     }
 
-    const [indexFile, browserReloadScript] = await Promise.all(filePathsToRead.map((path) => readFile(path)));
+    const [indexFile, browserReloadScript] = await Promise.all(filePathsToRead.map((path) => utils.readFile(path)));
     let fileContent = indexFile.toString();
 
     if (browserReloadScript) {
         const scriptToInject = `<body>\n\t<script>\n${browserReloadScript.toString()}\t</script>`;
         fileContent = fileContent.replace('<body>', scriptToInject);
     }
-    if (devBuildFolder) {
-        fileContent = fileContent.replace('./build/', `./${devBuildFolder}/`);
-    }
+    fileContent = fileContent.replace('./build/', `./${devBuildFolder}/`);
 
     response.setHeader('Content-Type', 'text/html');
     response.end(fileContent);
@@ -87,11 +86,11 @@ async function serveFile(filePath, response) {
 
     try {
         const extension = filePath.split('.').pop();
-        fileContent = await readFile(filePath);
+        fileContent = await utils.readFile(filePath);
         response.setHeader('Content-Type', getContentTypeByExtension(extension));
 
         if (resolveImports && extension === 'js') {
-            fileContent = resolveImports(fileContent.toString());
+            fileContent = resolveImports(fileContent.toString(), filePath);
         }
     } catch (error) {
         console.error(`can not serve file: ${error.path}`);
@@ -109,7 +108,7 @@ function initSSE(response) {
     response.setHeader('Cache-Control', 'no-cache');
 
     dispatchEvent = (event) => {
-        console.info('dispatch event: ' + event);
+        console.info(`dispatch event: ${event}`);
         response.write(`data: ${event}\n\n`);
     };
 
@@ -118,12 +117,12 @@ function initSSE(response) {
 
 async function watchFolder(path, changeHandler) {
     const changedFiles = new Set();
-    const delayedChangeHandler = debounce(changeHandler, 100);
+    const delayedChangeHandler = utils.debounce(changeHandler, 100);
     const subFolders = await getFoldersRecursive(path);
 
-    [path, ...subFolders].forEach(folderPath => {
+    [path, ...subFolders].forEach((folderPath) => {
         FileSystem.watch(folderPath, (eventType, filename) => {
-            changedFiles.add(folderPath + '/' + filename);
+            changedFiles.add(`${folderPath}/${filename}`);
             delayedChangeHandler(changedFiles);
         });
     });
@@ -135,14 +134,14 @@ async function getFoldersRecursive(path, folders = []) {
     let dirEntries;
 
     try {
-        dirEntries = await readDirectory(path);
+        dirEntries = await utils.readDirectory(path);
     } catch (error) {
         console.error(error);
     }
 
     const folderPaths = dirEntries
         .filter((dirEntry) => dirEntry.isDirectory())
-        .map((dirEntry) => path + '/' + dirEntry.name);
+        .map((dirEntry) => `${path}/${dirEntry.name}`);
 
     for (const folderPath of folderPaths) {
         folders.push(folderPath);
@@ -150,32 +149,6 @@ async function getFoldersRecursive(path, folders = []) {
     }
 
     return folders;
-}
-
-function readDirectory(path) {
-    return new Promise((resolve, reject) => {
-        FileSystem.readdir(path, {withFileTypes: true}, (error, dirEntries) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(dirEntries);
-            }
-        });
-    });
-}
-
-function readFile(filePath, options) {
-    console.log('readFile: ', filePath);
-
-    return new Promise((resolve, reject) => {
-        FileSystem.readFile(filePath, options, (error, data) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(data);
-            }
-        });
-    });
 }
 
 function getContentTypeByExtension(fileExtension) {
@@ -193,18 +166,6 @@ function getContentTypeByExtension(fileExtension) {
     }
 }
 
-function debounce(fnc, delay = 200, immediate = false) {
-    let timeoutId;
-
-    return (...args) => {
-        if (immediate && !timeoutId) {
-            fnc(...args);
-        }
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => fnc(...args), delay);
-    };
-}
-
 function openBrowser(browser = 'firefox') {
     const isWindows = process.platform.includes('win');
     const browserPaths = {
@@ -217,5 +178,5 @@ function openBrowser(browser = 'firefox') {
     childProcess.on('error', (e) => {
         console.error(`spawning process: "${e.path}" is failed with code: "${e.code}"`);
     });
-    childProcess.unref();   
+    childProcess.unref();
 }
