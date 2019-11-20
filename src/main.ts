@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-import AnimationHandler from './animationHandler';
+import AnimationHandler from './AnimationHandler';
 import CONFIG from './config';
+import Entity from './entity/Entity';
+import inputHandler, { EventType } from './inputHandler';
 import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
 
@@ -15,10 +17,10 @@ let paused = false;
 window.addEventListener('DOMContentLoaded', async () => {
     const handlers = await init();
 
-    window.addEventListener('keyup', (e) => {
-        if (e.key.toUpperCase() === 'P') {
+    inputHandler.listener.add(EventType.KEY_UP, (key: string) => {
+        if (key === 'P') {
             paused = !paused;
-            handlers.onPause();
+            handlers.togglePause();
         }
     });
 });
@@ -30,8 +32,8 @@ async function init() {
     renderer.gammaOutput = true;
     renderer.shadowMap.enabled = CONFIG.renderShadows;
 
-    renderer.setSize(CONFIG.viewWidth, CONFIG.viewHeight);
     document.body.appendChild(renderer.domElement);
+    renderer.setSize(CONFIG.viewWidth, CONFIG.viewHeight);
 
     const camera = new THREE.PerspectiveCamera(
         CONFIG.fieldOfView,
@@ -60,25 +62,23 @@ async function init() {
             node.receiveShadow = true;
         }
     });
-    const characterCollisionBody = physicsSimulator.obtainCollisionBody();
-    // characterCollisionBody.velocity.set(2, 0);
-
-    function applyPhysics() {
-        characterModel.position.set(characterCollisionBody.position.x, characterCollisionBody.position.y, 0);
-        // characterModel.rotation.setFromVector3()
-    }
 
     scene.add(characterModel);
 
     const animationMixer = new THREE.AnimationMixer(characterModel);
+    const character = new Entity(animationMixer);
     initCharacterAnimationController(animationMixer);
+    const renderCollisionBodies = initPhysicsDebugRender(physicsSimulator, scene);
 
     function render(elapsedTime = performance.now()) {
         if (paused) {
             return;
         }
         physicsSimulator.step(elapsedTime);
-        applyPhysics();
+        // ToDo rm
+        renderCollisionBodies();
+        // character.update(clock.getDelta()); // ToDo
+        character.update();
         animationMixer.update(clock.getDelta());
 
         renderer.render(scene, camera);
@@ -89,8 +89,14 @@ async function init() {
     physicsSimulator.start();
     render();
 
+    inputHandler.init(scene, camera, renderer.domElement);
+    // ToDo mouse move
+    inputHandler.listener.add(EventType.MOUSE_DOWN, (x: number, y: number) => {
+        character.moveTo(x, y);
+    });
+
     return {
-        onPause: () => {
+        togglePause: () => {
             if (paused) {
                 physicsSimulator.stop();
                 clock.stop();
@@ -114,6 +120,7 @@ function initCamera(camera: THREE.PerspectiveCamera) {
     cameraController.update();
 }
 
+// ToDo rm
 function initCharacterAnimationController(animationMixer: THREE.AnimationMixer) {
     const animationHandler = new AnimationHandler(animationMixer, {
         default: 'idle_passive',
@@ -145,19 +152,9 @@ function initCharacterAnimationController(animationMixer: THREE.AnimationMixer) 
             currentTarget.disabled = false;
         });
     }
-
-    let animationTerminator = null;
-    window.addEventListener('keyup', (e) => {
-        if (e.key.toUpperCase() === 'W' && !animationTerminator) {
-            animationTerminator = animationHandler.play('walk');
-        } else if (animationTerminator) {
-            animationTerminator();
-            animationTerminator = null;
-        }
-    });
 }
 
-function buildEnvironment(scene) {
+function buildEnvironment(scene: THREE.Scene) {
     scene.background = new THREE.Color(0xa0a0a0);
     scene.fog = new THREE.Fog(0xa0a0a0, 200, 1000);
 
@@ -180,6 +177,7 @@ function buildEnvironment(scene) {
         new THREE.PlaneBufferGeometry(2000, 2000),
         new THREE.MeshPhongMaterial({ color: 0x444444, depthWrite: false }),
     );
+    groundPlane.name = 'groundPlane';
     groundPlane.rotation.x = -Math.PI / 2;
     groundPlane.receiveShadow = CONFIG.renderShadows;
     scene.add(groundPlane);
@@ -189,4 +187,36 @@ function buildEnvironment(scene) {
     grid.material.opacity = 0.2;
     grid.material.transparent = true;
     scene.add(grid);
+}
+
+// ToDo rm
+function initPhysicsDebugRender(_physicsSimulator: typeof physicsSimulator, scene: THREE.Scene) {
+    const squares = Array.from({ length: _physicsSimulator.collisionBodyPool.items.length }).map(createSquare);
+
+    return () => {
+        const { activeCount } = _physicsSimulator.collisionBodyPool;
+        const len = squares.length;
+        let square: THREE.Mesh;
+
+        for (let i = 0; i < len; i++) {
+            square = squares[i];
+            square.visible = i < activeCount;
+            if (square.visible) {
+                const collisionBody = _physicsSimulator.collisionBodyPool.items[i];
+                square.scale.set(collisionBody.width, collisionBody.height, 1);
+                square.position.set(collisionBody.position.x, 0, collisionBody.position.y);
+            }
+        }
+    };
+
+    function createSquare() {
+        const square = new THREE.Mesh(
+            new THREE.PlaneBufferGeometry(1, 1),
+            new THREE.MeshPhongMaterial({ color: 0x33BB11, depthWrite: false }),
+        );
+        square.rotation.x = -Math.PI / 2;
+        scene.add(square);
+
+        return square;
+    }
 }

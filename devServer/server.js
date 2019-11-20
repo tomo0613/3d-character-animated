@@ -6,7 +6,7 @@ const Path = require('path');
 const { resolveImports } = require('./moduleImportResolver');
 const utils = require('./utils');
 
-const tsconfig = utils.readTsconfig();
+const tsconfig = utils.readTsConfig();
 const devBuildFolder = tsconfig.compilerOptions.outDir;
 
 const port = process.env.PORT || 3000;

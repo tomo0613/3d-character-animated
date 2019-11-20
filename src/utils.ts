@@ -4,6 +4,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 const progressDisplayContainer = document.getElementById('progress-display-container');
 
 export default {
+    debounce,
+    throttle,
     loadModel,
 };
 
@@ -76,8 +78,43 @@ function bytesToReadable(value: number, scale: 'k'|'M'|'G'|'T') {
     const n = ['k', 'M', 'G', 'T'].indexOf(scale) + 1;
 
     for (let i = 0; i < n; i++) {
-        value /= 1020;
+        value /= 1024;
     }
 
     return value.toFixed(2);
+}
+
+function debounce(fnc: Function, delay = 200, immediate = false) {
+    let timeoutId: number;
+
+    return (...args: any[]) => {
+        if (immediate && !timeoutId) {
+            fnc(...args);
+        }
+        window.clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => fnc(...args), delay);
+    };
+}
+
+function throttle(fnc: Function, timeToWaitBeforeNextCall = 200) {
+    let timeoutId: number;
+    let prevCallTime: number;
+    let timeStamp: number;
+    let nextScheduledCallTime: number;
+
+    return (...args: any[]) => {
+        nextScheduledCallTime = prevCallTime + timeToWaitBeforeNextCall;
+        timeStamp = performance.now();
+
+        if (!prevCallTime || timeStamp > nextScheduledCallTime) {
+            fnc(...args);
+            prevCallTime = timeStamp;
+        } else {
+            window.clearTimeout(timeoutId);
+            timeoutId = window.setTimeout(() => {
+                fnc(...args);
+                prevCallTime = timeStamp;
+            }, timeToWaitBeforeNextCall - (timeStamp - prevCallTime));
+        }
+    };
 }

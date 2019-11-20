@@ -24,6 +24,7 @@ module.exports = {
         'indent': [ERROR, 4, {SwitchCase: 1}],
         'max-len': [ERROR, 120],
         'no-param-reassign': WARNING,
+        'no-continue': DISABLED,
         'import/prefer-default-export': DISABLED,
         'import/no-unresolved': DISABLED,
         'no-multi-spaces': WARNING,

@@ -1,12 +1,13 @@
 import { Vector2 } from 'three';
 
 import { BoundingRect } from './BoundingRect';
+import { EventListener } from '../common/EventListener';
 
 export default class CollisionBody {
-    width: number;
-    height: number;
     position: Vector2;
     velocity = new Vector2();
+    blocking = false;
+    listener = new EventListener<'collision'>();
     collidingBodies: CollisionBody[] = [];
     private _boundingRect: BoundingRect;
 
@@ -15,11 +16,15 @@ export default class CollisionBody {
         this._boundingRect = new BoundingRect(width, height, x, y);
     }
 
-    // addEventListener()
-    onHit = () => {}
+    reset(width: number, height: number, x = 0, y = 0) {
+        this.position.set(x, y);
+        this.velocity.set(0, 0);
+        this.width = width;
+        this.height = height;
+        this.listener.clear();
+    }
 
-    move(timeStep: number, map: any) {
-        const nearCollisionBodies = []; // map.getNearCollisionBodies
+    move(timeStep: number, nearCollisionBodies: CollisionBody[]) {
         this.collidingBodies.length = 0;
 
         if (this.velocity.x) {
@@ -43,29 +48,50 @@ export default class CollisionBody {
         }
 
         if (this.collidingBodies.length) {
-            // this.intersectionObserver.broadcast(this.intersectingObjects);
+            this.listener.dispatch('collision', this.collidingBodies);
         }
     }
 
     private detectCollision(nearCollisionBodies: CollisionBody[]) {
         const nearCollisionBodyCount = nearCollisionBodies.length;
-        let colliding = false;
+        let blockMovement = false;
         let collisionBody: CollisionBody;
 
         for (let i = 0; i < nearCollisionBodyCount; i++) {
             collisionBody = nearCollisionBodies[i];
 
+            if (collisionBody === this) {
+                continue;
+            }
             if (this.boundingRect.top < collisionBody.boundingRect.bottom
                 && this.boundingRect.right > collisionBody.boundingRect.left
                 && this.boundingRect.bottom > collisionBody.boundingRect.top
                 && this.boundingRect.left < collisionBody.boundingRect.right
             ) {
-                this.collidingBodies.push(collisionBody);
-                colliding = true;
+                if (!this.collidingBodies.includes(collisionBody)) {
+                    this.collidingBodies.push(collisionBody);
+                }
+                blockMovement = collisionBody.blocking || blockMovement;
             }
         }
 
-        return colliding;
+        return blockMovement;
+    }
+
+    set width(width: number) {
+        this._boundingRect.width = width;
+    }
+
+    get width() {
+        return this._boundingRect.width;
+    }
+
+    set height(height: number) {
+        this._boundingRect.height = height;
+    }
+
+    get height() {
+        return this._boundingRect.height;
     }
 
     private get boundingRect() {

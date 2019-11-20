@@ -9,6 +9,7 @@ const crossFadeDuration = 0.3;
 export default class AnimationHandler {
     private mixer: THREE.AnimationMixer;
     private defaultAnimationAction: THREE.AnimationAction;
+    private currentAnimationAction: THREE.AnimationAction;
 
     constructor(animationMixer: THREE.AnimationMixer, config: AnimationHandlerConfig) {
         this.mixer = animationMixer;
@@ -18,41 +19,37 @@ export default class AnimationHandler {
 
     // ToDo keyof config...
     play = (animationName: string) => {
-        const animationAction = this.getAnimationActionByName(animationName);
+        this.currentAnimationAction = this.getAnimationActionByName(animationName);
 
-        this.start(animationAction);
-        this.defaultAnimationAction.crossFadeTo(animationAction, crossFadeDuration, false);
-
-        return () => {
-            this.playDefault();
-            this.defaultAnimationAction.crossFadeFrom(animationAction, crossFadeDuration, false);
-        };
-        // return new Promise((resolve) => {
-        //     // this.?.addEventListener(arg[1]);
-        // });
+        this.start(this.currentAnimationAction);
+        this.defaultAnimationAction.crossFadeTo(this.currentAnimationAction, crossFadeDuration, false);
     }
 
     playDefault = () => {
         this.start(this.defaultAnimationAction);
+        if (this.currentAnimationAction && this.currentAnimationAction !== this.defaultAnimationAction) {
+            this.defaultAnimationAction.crossFadeFrom(this.currentAnimationAction, crossFadeDuration, false);
+        }
+        this.currentAnimationAction = this.defaultAnimationAction;
     }
 
     playOnce = (animationName: string) => {
-        const animationAction = this.getAnimationActionByName(animationName);
+        this.currentAnimationAction = this.getAnimationActionByName(animationName);
 
-        this.start(animationAction);
-        this.defaultAnimationAction.crossFadeTo(animationAction, crossFadeDuration, false);
+        this.start(this.currentAnimationAction);
+        this.defaultAnimationAction.crossFadeTo(this.currentAnimationAction, crossFadeDuration, false);
 
         return new Promise((resolve) => {
             const animationRepeatListener = (e: AnimationLoopEvent) => {
-                if (e.action !== animationAction) {
+                if (e.action !== this.currentAnimationAction) {
                     return;
                 }
                 this.mixer.removeEventListener('loop', animationRepeatListener);
 
-                animationAction.stop();
+                this.currentAnimationAction.stop();
+                this.currentAnimationAction = null;
                 this.playDefault();
-                // this.defaultAnimationAction.crossFadeFrom(animationAction, crossFadeDuration, false);
-                // animationAction.crossFadeTo(this.defaultAnimationAction, 1, false);
+
                 resolve();
             };
             this.mixer.addEventListener('loop', animationRepeatListener);
