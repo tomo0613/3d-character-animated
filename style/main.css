@@ -15,7 +15,7 @@ canvas {
     display: flex;
     margin: auto;
     border: 1px solid black;
-    cursor: grab;
+    cursor: crosshair;
 }
 
 #animation-controller-container {

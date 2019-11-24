@@ -6,6 +6,8 @@ import { EventListener } from '../common/EventListener';
 export default class CollisionBody {
     position: Vector2;
     velocity = new Vector2();
+    orbitAxis = new Vector2();
+    orbitalVelocity = 0;
     blocking = false;
     listener = new EventListener<'collision'>();
     collidingBodies: CollisionBody[] = [];
@@ -19,6 +21,8 @@ export default class CollisionBody {
     reset(width: number, height: number, x = 0, y = 0) {
         this.position.set(x, y);
         this.velocity.set(0, 0);
+        this.orbitAxis.set(0, 0);
+        this.orbitalVelocity = 0;
         this.width = width;
         this.height = height;
         this.listener.clear();
@@ -27,20 +31,24 @@ export default class CollisionBody {
     move(timeStep: number, nearCollisionBodies: CollisionBody[]) {
         this.collidingBodies.length = 0;
 
-        if (this.velocity.x) {
+        if (this.velocity.x || this.velocity.y || this.orbitalVelocity) {
             const originX = this.position.x;
+            const originY = this.position.y;
+            const cos = Math.cos(this.orbitalVelocity);
+            const sin = Math.sin(this.orbitalVelocity);
+            const { x, y } = this.position.sub(this.orbitAxis);
 
-            this.position.x += this.velocity.x * timeStep;
+            this.position.x = (this.orbitalVelocity
+                ? x * cos - y * sin + this.orbitAxis.x
+                : this.position.x) + this.velocity.x * timeStep;
 
             if (this.detectCollision(nearCollisionBodies)) {
                 this.position.x = originX;
             }
-        }
 
-        if (this.velocity.y) {
-            const originY = this.position.y;
-
-            this.position.y += this.velocity.y * timeStep;
+            this.position.y = (this.orbitalVelocity
+                ? x * sin + y * cos + this.orbitAxis.y
+                : this.position.y) + this.velocity.y * timeStep;
 
             if (this.detectCollision(nearCollisionBodies)) {
                 this.position.y = originY;

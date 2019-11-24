@@ -41,7 +41,6 @@ async function init() {
         CONFIG.cameraNear,
         CONFIG.cameraFar,
     );
-    initCamera(camera);
     const scene = new THREE.Scene();
     buildEnvironment(scene);
 
@@ -64,6 +63,7 @@ async function init() {
     });
 
     scene.add(characterModel);
+    const updateCamera = initCamera(camera, characterModel.position);
 
     const animationMixer = new THREE.AnimationMixer(characterModel);
     const character = new Entity(animationMixer);
@@ -81,6 +81,7 @@ async function init() {
         character.update();
         animationMixer.update(clock.getDelta());
 
+        updateCamera();
         renderer.render(scene, camera);
 
         requestAnimationFrame(render);
@@ -90,9 +91,11 @@ async function init() {
     render();
 
     inputHandler.init(scene, camera, renderer.domElement);
-    // ToDo mouse move
-    inputHandler.listener.add(EventType.MOUSE_DOWN, (x: number, y: number) => {
-        character.moveTo(x, y);
+    inputHandler.listener.add(EventType.MOUSE_DOWN, character.moveTo);
+    inputHandler.listener.add(EventType.KEY_UP, (key: string) => {
+        if (key === 'X') {
+            character.attack(0, 0);
+        }
     });
 
     return {
@@ -109,15 +112,26 @@ async function init() {
     };
 }
 
-function initCamera(camera: THREE.PerspectiveCamera) {
-    const cameraController = new OrbitControls(camera);
+function initCamera(camera: THREE.PerspectiveCamera, targetPosition: THREE.Vector3) {
+    // const cameraController = new OrbitControls(camera);
+    // cameraController.target = new THREE.Vector3(0, 10, 0);
+    // cameraController.minDistance = 10;
+    // cameraController.update();
+    const cameraPositionOffset = new THREE.Vector3(-50, 30, 0);
+    const cameraDirectionOffset = new THREE.Vector3(0, 10, 0);
+    const cameraPosition = new THREE.Vector3();
+    const cameraDirection = new THREE.Vector3();
 
-    camera.position.x = -30;
-    camera.position.y = 20;
+    updateCameraPosition();
 
-    cameraController.target = new THREE.Vector3(0, 10, 0);
-    cameraController.minDistance = 10;
-    cameraController.update();
+    return updateCameraPosition;
+
+    function updateCameraPosition() {
+        cameraPosition.copy(targetPosition).add(cameraPositionOffset);
+        cameraDirection.copy(targetPosition).add(cameraDirectionOffset);
+        camera.position.copy(cameraPosition);
+        camera.lookAt(cameraDirection);
+    }
 }
 
 // ToDo rm
