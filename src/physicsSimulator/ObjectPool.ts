@@ -2,8 +2,8 @@ export default class ObjectPool<ObjectType> {
     activeCount = 0;
     items: ObjectType[];
 
-    constructor(itemCount: number, ObjectConstructor /* : new ObjectType */) {
-        this.items = Array.from({ length: itemCount }).map(() => new ObjectConstructor());
+    constructor(itemCount: number, ObjectConstructor /* : new ObjectType */, defaultParams: any[]) {
+        this.items = Array.from({ length: itemCount }).map(() => new ObjectConstructor(...defaultParams));
     }
 
     /**

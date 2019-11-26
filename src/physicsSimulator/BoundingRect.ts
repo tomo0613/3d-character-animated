@@ -17,9 +17,9 @@ export class BoundingRect {
     }
 
     update() {
-        this.top = this.position.y - this.height / 2;
+        this.top = this.position.y + this.height / 2;
         this.right = this.position.x + this.width / 2;
-        this.bottom = this.position.y + this.height / 2;
+        this.bottom = this.position.y - this.height / 2;
         this.left = this.position.x - this.width / 2;
     }
 }

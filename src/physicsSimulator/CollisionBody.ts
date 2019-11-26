@@ -18,13 +18,14 @@ export default class CollisionBody {
         this._boundingRect = new BoundingRect(width, height, x, y);
     }
 
-    reset(width: number, height: number, x = 0, y = 0) {
+    reConstruct(width: number, height: number, x = 0, y = 0) {
         this.position.set(x, y);
         this.velocity.set(0, 0);
         this.orbitAxis.set(0, 0);
         this.orbitalVelocity = 0;
         this.width = width;
         this.height = height;
+        this._boundingRect.update();
         this.listener.clear();
     }
 
@@ -71,9 +72,9 @@ export default class CollisionBody {
             if (collisionBody === this) {
                 continue;
             }
-            if (this.boundingRect.top < collisionBody.boundingRect.bottom
+            if (this.boundingRect.top > collisionBody.boundingRect.bottom
                 && this.boundingRect.right > collisionBody.boundingRect.left
-                && this.boundingRect.bottom > collisionBody.boundingRect.top
+                && this.boundingRect.bottom < collisionBody.boundingRect.top
                 && this.boundingRect.left < collisionBody.boundingRect.right
             ) {
                 if (!this.collidingBodies.includes(collisionBody)) {

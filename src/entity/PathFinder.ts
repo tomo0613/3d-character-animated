@@ -11,7 +11,7 @@ export default class PathFinder {
     async setTarget(x: number, y: number) {
         this.targetPosition.set(x, y);
         this.targetArea = physicsSimulator.obtainCollisionBody();
-        this.targetArea.reset(1, 1, x, y);
+        this.targetArea.reConstruct(1, 1, x, y);
 
         return this.targetArea;
     }

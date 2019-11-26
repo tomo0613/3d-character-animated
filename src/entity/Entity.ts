@@ -19,7 +19,7 @@ export default class Entity {
     pathFinder: PathFinder;
     model: any; // ToDo
     collisionBody = physicsSimulator.obtainCollisionBody();
-    direction = new THREE.Vector2();
+    direction = new THREE.Vector2(1, 0);
     state: State = State.IDLE;
     attackSpeed = 1;
     movementSpeed = 14; // 1
@@ -33,7 +33,7 @@ export default class Entity {
         });
 
         this.model = animationMixer.getRoot();
-        this.collisionBody.reset(5, 5);
+        this.collisionBody.reConstruct(5, 5);
         this.collisionBody.listener.add('collision', this.onCollision);
     }
 
@@ -45,7 +45,7 @@ export default class Entity {
                 yAxis,
                 -Math.atan2(this.collisionBody.velocity.y, this.collisionBody.velocity.x),
             );
-            this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.1);
+            this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.15);
         }
     }
 
@@ -85,6 +85,9 @@ export default class Entity {
     }
 
     moveTo = (x: number, y: number) => {
+        if (this.state === State.ATTACK) {
+            return;
+        }
         // ToDo mv to setState
         (this.state === State.WALK ? this.pathFinder.resetTarget(x, y) : this.pathFinder.setTarget(x, y))
             .then(this.onSetTarget)
@@ -117,14 +120,14 @@ function swordSlash(owner: Entity) {
     const damage = 1;
     const angularSpeed = 0.05;
     const duration = 500;
-    const range = 15;
+    const range = 10;
     const hitBox = physicsSimulator.obtainCollisionBody();
     // ToDo
     const offset = new THREE.Vector2().copy(owner.direction).multiplyScalar(range);
     const position = new THREE.Vector2().copy(owner.position).add(offset);
 
     // get Direction
-    hitBox.reset(3, 3, position.x + range, position.y);
+    hitBox.reConstruct(3, 3, position.x, position.y);
     hitBox.orbitAxis.copy(owner.position);
     hitBox.orbitalVelocity = angularSpeed;
     hitBox.listener.add('collision', onHit);
@@ -135,6 +138,6 @@ function swordSlash(owner: Entity) {
     }, duration);
 
     function onHit(collidingBodies: CollisionBody[]) {
-        console.log('deal damage', collidingBodies);
+        console.log('deal damage', collidingBodies.length, collidingBodies[0], hitBox);
     }
 }
