@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import AnimationHandler from '../AnimationHandler';
 import CollisionBody from '../physicsSimulator/CollisionBody';
+import { FBX } from '../main';
 import PathFinder from './PathFinder';
 import physicsSimulator from '../physicsSimulator/simulator';
 
@@ -15,30 +16,34 @@ export enum State {
 const yAxis = new THREE.Vector3(0, 1, 0);
 
 export default class Entity {
+    model: FBX;
     animationHandler: AnimationHandler;
+    animationMixer: THREE.AnimationMixer;
     pathFinder: PathFinder;
-    model: any; // ToDo
     collisionBody = physicsSimulator.obtainCollisionBody();
     direction = new THREE.Vector2(1, 0);
     state: State = State.IDLE;
+    action: any = undefined;
     attackSpeed = 1;
     movementSpeed = 14; // 1
     abilities = [];
     private tmp_targetQuaternion = new THREE.Quaternion();
 
-    constructor(animationMixer: THREE.AnimationMixer) {
+    constructor(model: FBX) {
+        this.model = model;
         this.pathFinder = new PathFinder();
-        this.animationHandler = new AnimationHandler(animationMixer, {
+        this.animationMixer = new THREE.AnimationMixer(model);
+        this.animationHandler = new AnimationHandler(this.animationMixer, {
             default: 'idle_passive',
         });
 
-        this.model = animationMixer.getRoot();
-        this.collisionBody.reConstruct(5, 5);
+        this.collisionBody.reConstruct(4);
         this.collisionBody.listener.add('collision', this.onCollision);
     }
 
-    update() {
+    update(elapsedTimeS: number) {
         this.model.position.set(this.collisionBody.position.x, 0, this.collisionBody.position.y);
+
         if (this.collisionBody.velocity.x || this.collisionBody.velocity.y) {
             this.direction.copy(this.collisionBody.velocity).normalize();
             this.tmp_targetQuaternion.setFromAxisAngle(
@@ -47,6 +52,11 @@ export default class Entity {
             );
             this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.15);
         }
+
+        if (this.action) {
+            this.action.update(elapsedTimeS);
+        }
+        this.animationMixer.update(elapsedTimeS);
     }
 
     setState = (state = State.IDLE) => {
@@ -72,9 +82,7 @@ export default class Entity {
                 if (this.state !== State.IDLE) {
                     return;
                 }
-                swordSlash(this);
-                this.animationHandler.playOnce('slash_inward')
-                    .then(this.setState);
+                this.action = swordSlash(this);
                 break;
             default:
                 this.collisionBody.velocity.set(0, 0);
@@ -84,7 +92,7 @@ export default class Entity {
         this.state = state;
     }
 
-    moveTo = (x: number, y: number) => {
+    setTarget = (x: number, y: number) => {
         if (this.state === State.ATTACK) {
             return;
         }
@@ -118,26 +126,52 @@ export default class Entity {
 
 function swordSlash(owner: Entity) {
     const damage = 1;
-    const angularSpeed = 0.05;
-    const duration = 500;
+    const angularSpeed = 0.02;
+    const duration = 1666;
+    let progress = 0;
+    // prepare 0.7 / strike 1 / recover
     const range = 10;
     const hitBox = physicsSimulator.obtainCollisionBody();
-    // ToDo
-    const offset = new THREE.Vector2().copy(owner.direction).multiplyScalar(range);
-    const position = new THREE.Vector2().copy(owner.position).add(offset);
+    // ToDo static
+    const offset = new THREE.Vector2();
+    const position = new THREE.Vector2();
 
-    // get Direction
-    hitBox.reConstruct(3, 3, position.x, position.y);
-    hitBox.orbitAxis.copy(owner.position);
-    hitBox.orbitalVelocity = angularSpeed;
-    hitBox.listener.add('collision', onHit);
+    setUp();
 
-    window.setTimeout(() => {
-        hitBox.listener.remove('collision', onHit);
-        physicsSimulator.releaseCollisionBody(hitBox);
-    }, duration);
+    owner.animationHandler.playOnce('slash_inward')
+        .then(terminate);
+
+    return {
+        update,
+    };
+
+    function setUp() {
+        offset.copy(owner.direction).multiplyScalar(range);
+        position.copy(owner.position).add(offset);
+
+        hitBox.reConstruct(2, position.x, position.y);
+        hitBox.orbitAxis.copy(owner.position);
+        hitBox.orbitalVelocity = angularSpeed;
+        hitBox.listener.add('collision', onHit);
+    }
+
+    function update(elapsedTimeS: number) {
+        progress += elapsedTimeS;
+    }
 
     function onHit(collidingBodies: CollisionBody[]) {
-        console.log('deal damage', collidingBodies.length, collidingBodies[0], hitBox);
+        console.log(
+            'deal damage',
+            collidingBodies.length,
+            JSON.stringify(collidingBodies[0].position),
+            JSON.stringify(hitBox.position),
+        );
+    }
+
+    function terminate() {
+        hitBox.listener.remove('collision', onHit);
+        physicsSimulator.releaseCollisionBody(hitBox);
+        owner.setState();
+        owner.action = undefined;
     }
 }

@@ -2,7 +2,7 @@ import CollisionBody from './CollisionBody';
 import ObjectPool from './ObjectPool';
 import loopInterface from './loop';
 
-const collisionBodyPool = new ObjectPool<CollisionBody>(2, CollisionBody, [1, 1]);
+const collisionBodyPool = new ObjectPool<CollisionBody>(2, CollisionBody, [1]);
 
 loopInterface.update = update;
 

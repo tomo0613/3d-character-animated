@@ -1,31 +1,28 @@
 import { Vector2 } from 'three';
 
-import { BoundingRect } from './BoundingRect';
 import { EventListener } from '../common/EventListener';
 
 export default class CollisionBody {
     position: Vector2;
+    radius: number;
     velocity = new Vector2();
     orbitAxis = new Vector2();
     orbitalVelocity = 0;
     blocking = false;
     listener = new EventListener<'collision'>();
     collidingBodies: CollisionBody[] = [];
-    private _boundingRect: BoundingRect;
 
-    constructor(width: number, height: number, x = 0, y = 0) {
+    constructor(radius: number, x = 0, y = 0) {
         this.position = new Vector2(x, y);
-        this._boundingRect = new BoundingRect(width, height, x, y);
+        this.radius = radius;
     }
 
-    reConstruct(width: number, height: number, x = 0, y = 0) {
+    reConstruct(radius: number, x = 0, y = 0) {
         this.position.set(x, y);
         this.velocity.set(0, 0);
         this.orbitAxis.set(0, 0);
         this.orbitalVelocity = 0;
-        this.width = width;
-        this.height = height;
-        this._boundingRect.update();
+        this.radius = radius;
         this.listener.clear();
     }
 
@@ -35,24 +32,16 @@ export default class CollisionBody {
         if (this.velocity.x || this.velocity.y || this.orbitalVelocity) {
             const originX = this.position.x;
             const originY = this.position.y;
-            const cos = Math.cos(this.orbitalVelocity);
-            const sin = Math.sin(this.orbitalVelocity);
-            const { x, y } = this.position.sub(this.orbitAxis);
 
-            this.position.x = (this.orbitalVelocity
-                ? x * cos - y * sin + this.orbitAxis.x
-                : this.position.x) + this.velocity.x * timeStep;
-
-            if (this.detectCollision(nearCollisionBodies)) {
-                this.position.x = originX;
+            if (this.orbitalVelocity) {
+                this.position.rotateAround(this.orbitAxis, this.orbitalVelocity);
             }
 
-            this.position.y = (this.orbitalVelocity
-                ? x * sin + y * cos + this.orbitAxis.y
-                : this.position.y) + this.velocity.y * timeStep;
+            this.position.x += this.velocity.x * timeStep;
+            this.position.y += this.velocity.y * timeStep;
 
             if (this.detectCollision(nearCollisionBodies)) {
-                this.position.y = originY;
+                this.position.set(originX, originY);
             }
         }
 
@@ -72,11 +61,9 @@ export default class CollisionBody {
             if (collisionBody === this) {
                 continue;
             }
-            if (this.boundingRect.top > collisionBody.boundingRect.bottom
-                && this.boundingRect.right > collisionBody.boundingRect.left
-                && this.boundingRect.bottom < collisionBody.boundingRect.top
-                && this.boundingRect.left < collisionBody.boundingRect.right
-            ) {
+
+            // https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection#402010
+            if (this.position.distanceTo(collisionBody.position) < this.radius + collisionBody.radius) {
                 if (!this.collidingBodies.includes(collisionBody)) {
                     this.collidingBodies.push(collisionBody);
                 }
@@ -85,30 +72,5 @@ export default class CollisionBody {
         }
 
         return blockMovement;
-    }
-
-    set width(width: number) {
-        this._boundingRect.width = width;
-    }
-
-    get width() {
-        return this._boundingRect.width;
-    }
-
-    set height(height: number) {
-        this._boundingRect.height = height;
-    }
-
-    get height() {
-        return this._boundingRect.height;
-    }
-
-    private get boundingRect() {
-        if (!this.position.equals(this._boundingRect.position)) {
-            this._boundingRect.position.copy(this.position);
-            this._boundingRect.update();
-        }
-
-        return this._boundingRect;
     }
 }

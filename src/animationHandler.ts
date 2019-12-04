@@ -9,12 +9,13 @@ const crossFadeDuration = 0.3;
 export default class AnimationHandler {
     private mixer: THREE.AnimationMixer;
     private defaultAnimationAction: THREE.AnimationAction;
-    private currentAnimationAction: THREE.AnimationAction;
+    currentAnimationAction: THREE.AnimationAction;
 
     constructor(animationMixer: THREE.AnimationMixer, config: AnimationHandlerConfig) {
         this.mixer = animationMixer;
 
         this.defaultAnimationAction = this.getAnimationActionByName(config.default);
+        this.currentAnimationAction = this.defaultAnimationAction;
     }
 
     // ToDo keyof config...

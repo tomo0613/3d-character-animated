@@ -8,7 +8,7 @@ import inputHandler, { EventType } from './inputHandler';
 import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
 
-type FBX = THREE.Group & {
+export type FBX = THREE.Group & {
     animations: THREE.AnimationClip[];
 };
 
@@ -65,9 +65,9 @@ async function init() {
     scene.add(characterModel);
     const updateCamera = initCamera(camera, characterModel.position);
 
-    const animationMixer = new THREE.AnimationMixer(characterModel);
-    const character = new Entity(animationMixer);
-    initCharacterAnimationController(animationMixer);
+    const character = new Entity(characterModel);
+
+    initCharacterAnimationController(character.animationMixer);
     const renderCollisionBodies = initPhysicsDebugRender(physicsSimulator, scene);
 
     function render(elapsedTime = performance.now()) {
@@ -77,9 +77,8 @@ async function init() {
         physicsSimulator.step(elapsedTime);
         // ToDo rm
         renderCollisionBodies();
-        // character.update(clock.getDelta()); // ToDo
-        character.update();
-        animationMixer.update(clock.getDelta());
+
+        character.update(clock.getDelta());
 
         updateCamera();
         renderer.render(scene, camera);
@@ -91,7 +90,7 @@ async function init() {
     render();
 
     inputHandler.init(scene, camera, renderer.domElement);
-    inputHandler.listener.add(EventType.MOUSE_DOWN, character.moveTo);
+    inputHandler.listener.add(EventType.MOUSE_DOWN, character.setTarget);
     inputHandler.listener.add(EventType.KEY_UP, (key: string) => {
         if (key === 'X') {
             character.attack(0, 0);
@@ -205,27 +204,27 @@ function buildEnvironment(scene: THREE.Scene) {
 
 // ToDo rm
 function initPhysicsDebugRender(_physicsSimulator: typeof physicsSimulator, scene: THREE.Scene) {
-    const squares = Array.from({ length: _physicsSimulator.collisionBodyPool.items.length }).map(createSquare);
+    const circles = Array.from({ length: _physicsSimulator.collisionBodyPool.items.length }).map(createCircle);
 
     return () => {
         const { activeCount } = _physicsSimulator.collisionBodyPool;
-        const len = squares.length;
-        let square: THREE.Mesh;
+        const len = circles.length;
+        let circle: THREE.Mesh;
 
         for (let i = 0; i < len; i++) {
-            square = squares[i];
-            square.visible = i < activeCount;
-            if (square.visible) {
+            circle = circles[i];
+            circle.visible = i < activeCount;
+            if (circle.visible) {
                 const collisionBody = _physicsSimulator.collisionBodyPool.items[i];
-                square.scale.set(collisionBody.width, collisionBody.height, 1);
-                square.position.set(collisionBody.position.x, 0, collisionBody.position.y);
+                circle.scale.set(collisionBody.radius, collisionBody.radius, 1);
+                circle.position.set(collisionBody.position.x, 0, collisionBody.position.y);
             }
         }
     };
 
-    function createSquare() {
+    function createCircle() {
         const square = new THREE.Mesh(
-            new THREE.PlaneBufferGeometry(1, 1),
+            new THREE.CircleBufferGeometry(1, 8),
             new THREE.MeshPhongMaterial({ color: 0x33BB11, depthWrite: false }),
         );
         square.rotation.x = -Math.PI / 2;
