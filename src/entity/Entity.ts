@@ -31,7 +31,7 @@ export default class Entity {
     abilities: {[name: string]: Attack} = {};
     private tmp_targetQuaternion = new THREE.Quaternion();
 
-    constructor(model: GLTF, animationConfig: AnimationHandlerConfig<State>) {
+    constructor(model: GLTF, animationConfig: AnimationHandlerConfig) {
         this.model = model.scene;
         this.pathFinder = new PathFinder();
         this.animationMixer = new THREE.AnimationMixer(model.scene);

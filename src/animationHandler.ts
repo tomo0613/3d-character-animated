@@ -6,17 +6,18 @@ interface BaseAnimationHandlerConfig {
     default: string;
 }
 // ToDo fix S
-export type AnimationHandlerConfig<S> = Record<S, string> & BaseAnimationHandlerConfig;
+// export type AnimationHandlerConfig<S> = Record<S, string> & BaseAnimationHandlerConfig;
+export type AnimationHandlerConfig = Record<string, string> & BaseAnimationHandlerConfig;
 
 const crossFadeDuration = 0.3;
 
-export default class AnimationHandler<S = unknown> {
+export default class AnimationHandler {
     animations = new Map<string, AnimationAction>(); // private ?
     private mixer: AnimationMixer;
     private defaultAnimationAction: AnimationAction;
     currentAnimationAction: AnimationAction;
 
-    constructor(animationMixer: AnimationMixer, animations: AnimationClip[], config: AnimationHandlerConfig<S>) {
+    constructor(animationMixer: AnimationMixer, animations: AnimationClip[], config: AnimationHandlerConfig) {
         animations.forEach((clip) => {
             this.animations.set(clip.name, animationMixer.clipAction(clip));
         });
