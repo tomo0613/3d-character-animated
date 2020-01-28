@@ -1,7 +1,7 @@
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
 const progressDisplayContainer = document.getElementById('progress-display-container');
+const supportedExtensions = ['GLB', 'GLTF'];
 
 export default {
     debounce,
@@ -11,24 +11,16 @@ export default {
 
 function loadModel(resourceUrl: string) {
     let finished = false;
-    let loader: FBXLoader|GLTFLoader;
     let progressDisplay: HTMLElement;
+    const loader = new GLTFLoader();
     const extension = resourceUrl.split('.').pop().toUpperCase();
 
-    switch (extension) {
-        case 'GLB':
-        case 'GLTF':
-            loader = new GLTFLoader();
-            break;
-        case 'FBX':
-            loader = new FBXLoader();
-            break;
-        default:
-            return Promise.reject(new Error(`Failed to load resource: "${resourceUrl}" due it has unknown extension`));
+    if (!supportedExtensions.includes(extension)) {
+        return Promise.reject(new Error(`Failed to load resource: "${resourceUrl}" due it has unsupported extension`));
     }
 
-    return new Promise((resolve, reject) => {
-        const onLoad = (resource) => {
+    return new Promise<GLTF>((resolve, reject) => {
+        const onLoad = (resource: GLTF) => {
             resolve(resource);
         };
         const onError = (e) => {
@@ -70,6 +62,10 @@ function loadModel(resourceUrl: string) {
         progressDisplay.addEventListener('transitionend', () => {
             progressDisplayContainer.removeChild(progressDisplay);
             progressDisplay = null;
+
+            if (!progressDisplayContainer.childElementCount) {
+                progressDisplayContainer.hidden = true;
+            }
         });
     }
 }

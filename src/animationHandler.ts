@@ -1,27 +1,33 @@
+import { AnimationAction, AnimationClip, AnimationMixer } from 'three';
+
 type AnimationLoopEvent = THREE.Event & {action: THREE.AnimationAction; loopDelta: number};
 
-interface AnimationHandlerConfig {
+interface BaseAnimationHandlerConfig {
     default: string;
 }
+// ToDo fix S
+export type AnimationHandlerConfig<S> = Record<S, string> & BaseAnimationHandlerConfig;
 
 const crossFadeDuration = 0.3;
 
-export default class AnimationHandler {
-    private mixer: THREE.AnimationMixer;
-    private defaultAnimationAction: THREE.AnimationAction;
-    currentAnimationAction: THREE.AnimationAction;
+export default class AnimationHandler<S = unknown> {
+    animations = new Map<string, AnimationAction>(); // private ?
+    private mixer: AnimationMixer;
+    private defaultAnimationAction: AnimationAction;
+    currentAnimationAction: AnimationAction;
 
-    constructor(animationMixer: THREE.AnimationMixer, config: AnimationHandlerConfig) {
+    constructor(animationMixer: AnimationMixer, animations: AnimationClip[], config: AnimationHandlerConfig<S>) {
+        animations.forEach((clip) => {
+            this.animations.set(clip.name, animationMixer.clipAction(clip));
+        });
         this.mixer = animationMixer;
-
-        this.defaultAnimationAction = this.getAnimationActionByName(config.default);
+        this.defaultAnimationAction = this.animations.get(config.default);
         this.currentAnimationAction = this.defaultAnimationAction;
     }
 
     // ToDo keyof config...
     play = (animationName: string) => {
-        this.currentAnimationAction = this.getAnimationActionByName(animationName);
-
+        this.currentAnimationAction = this.animations.get(animationName);
         this.start(this.currentAnimationAction);
         this.defaultAnimationAction.crossFadeTo(this.currentAnimationAction, crossFadeDuration, false);
     }
@@ -35,7 +41,7 @@ export default class AnimationHandler {
     }
 
     playOnce = (animationName: string) => {
-        this.currentAnimationAction = this.getAnimationActionByName(animationName);
+        this.currentAnimationAction = this.animations.get(animationName);
 
         this.start(this.currentAnimationAction);
         this.defaultAnimationAction.crossFadeTo(this.currentAnimationAction, crossFadeDuration, false);
@@ -57,15 +63,11 @@ export default class AnimationHandler {
         });
     }
 
-    start = (animationAction: THREE.AnimationAction) => {
+    start = (animationAction: AnimationAction) => {
         animationAction.time = 0;
         animationAction.enabled = true;
         animationAction.setEffectiveTimeScale(1);
         animationAction.setEffectiveWeight(1);
         animationAction.play();
-    }
-
-    private getAnimationActionByName(animationName: string) {
-        return (this.mixer.clipAction as any)(animationName) as THREE.AnimationAction;
     }
 }

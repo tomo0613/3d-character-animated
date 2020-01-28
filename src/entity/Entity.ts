@@ -1,9 +1,9 @@
 import * as THREE from 'three';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
-import AnimationHandler from '../AnimationHandler';
+import AnimationHandler, { AnimationHandlerConfig } from '../AnimationHandler';
 import { Attack } from './Attack';
 import CollisionBody from '../physicsSimulator/CollisionBody';
-import { FBX } from '../main';
 import PathFinder from './PathFinder';
 import physicsSimulator from '../physicsSimulator/simulator';
 
@@ -14,10 +14,11 @@ export enum State {
     DEATH = 'DEATH',
 }
 
+
 const yAxis = new THREE.Vector3(0, 1, 0);
 
 export default class Entity {
-    model: FBX;
+    model: THREE.Object3D;
     animationHandler: AnimationHandler;
     animationMixer: THREE.AnimationMixer;
     pathFinder: PathFinder;
@@ -30,25 +31,31 @@ export default class Entity {
     abilities: {[name: string]: Attack} = {};
     private tmp_targetQuaternion = new THREE.Quaternion();
 
-    constructor(model: FBX) {
-        this.model = model;
+    constructor(model: GLTF, animationConfig: AnimationHandlerConfig<State>) {
+        this.model = model.scene;
         this.pathFinder = new PathFinder();
-        this.animationMixer = new THREE.AnimationMixer(model);
-        this.animationHandler = new AnimationHandler(this.animationMixer, {
-            default: 'idle_passive',
-        });
+        this.animationMixer = new THREE.AnimationMixer(model.scene);
+        this.animationHandler = new AnimationHandler(this.animationMixer, model.animations, animationConfig);
 
         this.collisionBody.reConstruct(4);
         this.collisionBody.listener.add('collision', this.onCollision);
 
         this.abilities.swordSlash = new Attack(this, {
-            animationName: 'slash_inward',
-            duration: 1.66,
-            phaseTransitionTimes: [0.6, 0.9],
-            hitBoxInitialDistance: 15,
-            hitBoxInitialRotation: -Math.PI / 3,
-            hitBoxAngularSpeed: 0.1,
+            animationName: 'cast-forward',
+            duration: 1.46, // 44 frameCount
+            phaseTransitionTimes: [0.5, 0.6], // 15, 18 phaseTransitionFrames
+            hitBoxInitialDistance: 7,
         });
+        // this.abilities.swordSlash = new Attack(this, {
+        //     animationName: 'slash_inward',
+        //     duration: 1.66, // 51
+        //     phaseTransitionTimes: [0.6, 0.9], // 24 27
+        //     hitBoxInitialDistance: 15,
+        //     hitBoxInitialRotation: -Math.PI / 3,
+        //     hitBoxAngularSpeed: 0.1,
+        // });
+
+        this.animationHandler.playDefault();
     }
 
     update(elapsedTimeS: number) {

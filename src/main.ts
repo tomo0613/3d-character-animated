@@ -1,10 +1,10 @@
 import * as THREE from 'three';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-import AnimationHandler from './AnimationHandler';
+import inputHandler, { EventType } from './inputHandler';
 import CONFIG from './config';
 import Entity from './entity/Entity';
-import inputHandler, { EventType } from './inputHandler';
 import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
 
@@ -44,41 +44,63 @@ async function init() {
     const scene = new THREE.Scene();
     buildEnvironment(scene);
 
-    let characterModel: FBX;
+    let sorceressGLTF: GLTF;
+    let paladinGLTF: GLTF;
 
     try {
-        characterModel = await utils.loadModel('assets/3D-Objects/Paladin.fbx') as FBX;
+        [sorceressGLTF, paladinGLTF] = await Promise.all([
+            utils.loadModel('assets/3D-Objects/Sorceress.glb'),
+            utils.loadModel('assets/3D-Objects/Paladin.glb'),
+        ]);
     } catch (e) {
         console.error(e);
     }
 
-    characterModel.traverse((node: any/* THREE.Object3D & THREE.Mesh */) => {
-        if (node.material) {
-            node.material.side = THREE.DoubleSide;
-        }
-        if (CONFIG.renderShadows && node.isMesh) {
-            node.castShadow = true;
-            node.receiveShadow = true;
-        }
+    const sorceressModel = sorceressGLTF.scene;
+    const paladinModel = paladinGLTF.scene;
+
+    sorceressModel.traverse(setMeshProperties);
+    paladinModel.traverse(setMeshProperties);
+
+    scene.add(sorceressModel, paladinModel);
+    const updateCamera = initCamera(camera, sorceressModel.position);
+
+    const character = new Entity(sorceressGLTF, {
+        default: 'idle',
+        IDLE: 'idle',
+        WALK: 'walk',
+        ATTACK: 'cast-forward',
+        DEATH: 'collapse',
     });
+    const companion = new Entity(paladinGLTF, {
+        default: 'idle',
+        IDLE: 'idle',
+        WALK: 'walk',
+        ATTACK: 'slash_inward',
+        DEATH: 'collapse',
+    });
+    companion.position.set(10, -10);
 
-    scene.add(characterModel);
-    const updateCamera = initCamera(camera, characterModel.position);
-
-    const character = new Entity(characterModel);
-
-    initCharacterAnimationController(character.animationMixer);
+    initCharacterAnimationController(character);
     const renderCollisionBodies = initPhysicsDebugRender(physicsSimulator, scene);
+    const entities = [character, companion];
+    const entityCount = entities.length;
+    let dt = 0;
 
     function render(elapsedTime = performance.now()) {
         if (paused) {
             return;
         }
+        dt = clock.getDelta();
+
         physicsSimulator.step(elapsedTime);
+
         // ToDo rm
         renderCollisionBodies();
 
-        character.update(clock.getDelta());
+        for (let i = 0; i < entityCount; i++) {
+            entities[i].update(dt);
+        }
 
         updateCamera();
         renderer.render(scene, camera);
@@ -111,6 +133,13 @@ async function init() {
     };
 }
 
+function setMeshProperties(node: any/* ToDo THREE.Object3D & THREE.Mesh */) {
+    if (CONFIG.renderShadows && node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+    }
+}
+
 function initCamera(camera: THREE.PerspectiveCamera, targetPosition: THREE.Vector3) {
     // const cameraController = new OrbitControls(camera);
     // cameraController.target = new THREE.Vector3(0, 10, 0);
@@ -134,35 +163,35 @@ function initCamera(camera: THREE.PerspectiveCamera, targetPosition: THREE.Vecto
 }
 
 // ToDo rm
-function initCharacterAnimationController(animationMixer: THREE.AnimationMixer) {
-    const animationHandler = new AnimationHandler(animationMixer, {
-        default: 'idle_passive',
-    });
-
+function initCharacterAnimationController(entity: Entity) {
     const controllerContainer = Object.assign(
         document.createElement('aside'),
         { id: 'animation-controller-container' },
     );
-    const animations = (animationMixer.getRoot() as FBX).animations
-        .filter((animation) => !/^Armature\|\w+/.test(animation.name));
+    const buttons: HTMLButtonElement[] = [];
 
-    animations.forEach((animation) => {
+    entity.animationHandler.animations.forEach((animation, animationName) => {
         const button = Object.assign(
             document.createElement('button'),
-            { textContent: animation.name, onclick: onClick },
+            { textContent: animationName, onclick: onClick },
         );
-        button.dataset.animation_name = animation.name;
+        button.dataset.animation_name = animationName;
         controllerContainer.appendChild(button);
+
+        buttons.push(button);
     });
     document.body.appendChild(controllerContainer);
 
-    animationHandler.playDefault();
-
     function onClick({ currentTarget }: MouseEvent & {currentTarget: HTMLButtonElement}) {
-        currentTarget.disabled = true;
+        setButtonsDisabledAttribute(true);
+        entity.animationHandler.playOnce(currentTarget.dataset.animation_name).then(() => {
+            setButtonsDisabledAttribute(false);
+        });
+    }
 
-        animationHandler.playOnce(currentTarget.dataset.animation_name).then(() => {
-            currentTarget.disabled = false;
+    function setButtonsDisabledAttribute(disabled: boolean) {
+        buttons.forEach((button) => {
+            button.disabled = disabled;
         });
     }
 }
