@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import { Fire } from 'three/examples/jsm/objects/Fire';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 import inputHandler, { EventType } from './inputHandler';
 import CONFIG from './config';
 import Entity from './entity/Entity';
+import combatSystem from './combatSystem/combatSystem';
 import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
 
@@ -43,7 +45,40 @@ async function init() {
     );
     const scene = new THREE.Scene();
     buildEnvironment(scene);
+    // ////////////////////////////////////////////////////////////
 
+    const plane = new THREE.PlaneBufferGeometry(10, 15);
+    const [f1] = Array.from({ length: 1 }).map(() => {
+        const fire = new Fire(plane, {
+            textureWidth: 256,
+            textureHeight: 256,
+            colorBias: 0.96,
+            diffuse: 3.0,
+            viscosity: 0,
+            expansion: -0.2,
+            drag: 0,
+            airSpeed: 35.0,
+        });
+        fire.addSource(0.5, 0.1, 0.1, 1.0, 0.0, 1.0);
+        fire.position.set(10, 20, 10);
+        scene.add(fire);
+
+        fire.traverse((node: any) => {
+            if (node.material) {
+                node.material.opacity = 0.5;
+                node.material.transparent = true;
+                node.material.side = THREE.DoubleSide;
+            }
+        });
+
+        return fire;
+    });
+
+    f1.rotation.y = -Math.PI / 2;
+    // f2.rotation.y = -Math.PI / 2;
+    // fire.rotation.x = -Math.PI / 2;
+
+    // ////////////////////////////////////////////////////////////
     let sorceressGLTF: GLTF;
     let paladinGLTF: GLTF;
 
@@ -62,17 +97,16 @@ async function init() {
     sorceressModel.traverse(setMeshProperties);
     paladinModel.traverse(setMeshProperties);
 
-    scene.add(sorceressModel, paladinModel);
     const updateCamera = initCamera(camera, sorceressModel.position);
 
-    const character = new Entity(sorceressGLTF, {
+    const character = new Entity(sorceressGLTF, scene, {
         default: 'idle',
         IDLE: 'idle',
         WALK: 'walk',
         ATTACK: 'cast-forward',
-        DEATH: 'collapse',
+        // DEATH: 'collapse',
     });
-    const companion = new Entity(paladinGLTF, {
+    const companion = new Entity(paladinGLTF, scene, {
         default: 'idle',
         IDLE: 'idle',
         WALK: 'walk',
@@ -93,6 +127,7 @@ async function init() {
         }
         dt = clock.getDelta();
 
+        combatSystem.update(dt);
         physicsSimulator.step(elapsedTime);
 
         // ToDo rm
@@ -108,6 +143,7 @@ async function init() {
         requestAnimationFrame(render);
     }
 
+    combatSystem.init(scene);
     physicsSimulator.start();
     render();
 

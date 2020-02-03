@@ -1,10 +1,16 @@
 import CollisionBody from './CollisionBody';
-import ObjectPool from './ObjectPool';
+import ObjectPool from '../ObjectPool';
 import loopInterface from './loop';
 
-const collisionBodyPool = new ObjectPool<CollisionBody>(5, CollisionBody, [1]);
+// ToDo dynamic count
+const collisionBodyPool = new ObjectPool<CollisionBody>(10, CollisionBody, [1]);
 
-loopInterface.update = update;
+loopInterface.update = (dt: number) => {
+    for (let i = collisionBodyPool.activeCount - 1; i >= 0; i--) {
+        // ToDo getSpatialPartition
+        collisionBodyPool.items[i].move(dt, collisionBodyPool.items);
+    }
+};
 
 export default {
     ...loopInterface,
@@ -12,12 +18,3 @@ export default {
     obtainCollisionBody: collisionBodyPool.obtain,
     releaseCollisionBody: collisionBodyPool.release,
 };
-
-// HitBox (pos, owner, sprite, knock-back, duration, damage)t.top = this.position.y - this.height / 2;
-function update(dt: number) {
-    const len = collisionBodyPool.activeCount;
-    for (let i = 0; i < len; i++) {
-        // ToDo getSpatialPartition
-        collisionBodyPool.items[i].move(dt, collisionBodyPool.items);
-    }
-}

@@ -1,6 +1,6 @@
 import { AnimationAction, AnimationClip, AnimationMixer } from 'three';
 
-type AnimationLoopEvent = THREE.Event & {action: THREE.AnimationAction; loopDelta: number};
+type AnimationLoopEvent = THREE.Event & { action: THREE.AnimationAction; loopDelta: number };
 
 interface BaseAnimationHandlerConfig {
     default: string;

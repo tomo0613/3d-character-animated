@@ -2,6 +2,9 @@ export class EventListener<EventType extends string|number> {
     private listeners: Map<EventType, Set<Function>> = new Map();
 
     add(eventType: EventType, listener: Function) {
+        if (!listener) {
+            throw new Error(`EventListener->add($listener) Invalid $listener: ${listener}, with type ${eventType}`);
+        }
         if (this.listeners.has(eventType)) {
             const listeners = this.listeners.get(eventType);
 

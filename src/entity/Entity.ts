@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
 import AnimationHandler, { AnimationHandlerConfig } from '../AnimationHandler';
-import { Attack } from './Attack';
 import CollisionBody from '../physicsSimulator/CollisionBody';
 import PathFinder from './PathFinder';
+import combatSystem from '../combatSystem/combatSystem';
 import physicsSimulator from '../physicsSimulator/simulator';
 
 export enum State {
@@ -27,11 +27,9 @@ export default class Entity {
     attackSpeed = 1;
     movementSpeed = 14; // 1
     state: State = State.IDLE;
-    action: Attack|undefined;
-    abilities: {[name: string]: Attack} = {};
     private tmp_targetQuaternion = new THREE.Quaternion();
 
-    constructor(model: GLTF, animationConfig: AnimationHandlerConfig) {
+    constructor(model: GLTF, scene: THREE.Scene, animationConfig: AnimationHandlerConfig) {
         this.model = model.scene;
         this.pathFinder = new PathFinder();
         this.animationMixer = new THREE.AnimationMixer(model.scene);
@@ -40,26 +38,13 @@ export default class Entity {
         this.collisionBody.reConstruct(4);
         this.collisionBody.listener.add('collision', this.onCollision);
 
-        this.abilities.swordSlash = new Attack(this, {
-            animationName: 'cast-forward',
-            duration: 1.46, // 44 frameCount
-            phaseTransitionTimes: [0.5, 0.6], // 15, 18 phaseTransitionFrames
-            hitBoxInitialDistance: 7,
-        });
-        // this.abilities.swordSlash = new Attack(this, {
-        //     animationName: 'slash_inward',
-        //     duration: 1.66, // 51
-        //     phaseTransitionTimes: [0.6, 0.9], // 24 27
-        //     hitBoxInitialDistance: 15,
-        //     hitBoxInitialRotation: -Math.PI / 3,
-        //     hitBoxAngularSpeed: 0.1,
-        // });
-
         this.animationHandler.playDefault();
+        scene.add(this.model);
     }
 
     update(elapsedTimeS: number) {
-        this.model.position.set(this.collisionBody.position.x, 0, this.collisionBody.position.y);
+        this.model.position.x = this.collisionBody.position.x;
+        this.model.position.z = this.collisionBody.position.y;
 
         if (this.collisionBody.velocity.x || this.collisionBody.velocity.y) {
             this.direction.copy(this.collisionBody.velocity).normalize();
@@ -70,18 +55,16 @@ export default class Entity {
             this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.15);
         }
 
-        if (this.action) {
-            this.action.update(elapsedTimeS);
-        }
         this.animationMixer.update(elapsedTimeS);
     }
 
     setState = (state = State.IDLE) => {
-        const repeatState = this.state === state;
+        // assertState(this.state, state);
+        const isNewState = this.state !== state;
 
         switch (state) {
             case State.WALK:
-                if (this.state === State.ATTACK) {
+                if (this.state !== State.IDLE && this.state !== State.WALK) {
                     return;
                 }
                 this.collisionBody.velocity
@@ -89,7 +72,7 @@ export default class Entity {
                     .sub(this.collisionBody.position)
                     .normalize()
                     .multiplyScalar(this.movementSpeed);
-                if (!repeatState) {
+                if (isNewState) {
                     this.animationHandler.play('walk');
                 }
                 break;
@@ -98,8 +81,13 @@ export default class Entity {
                 if (this.state !== State.IDLE) {
                     return;
                 }
-                this.action = this.abilities.swordSlash;
-                this.action.perform();
+                combatSystem.initAction(this, 'castFireball', {
+                    animationDuration: 1.46,
+                    animationPhaseTransitionTimes: [0.5, 0.6],
+                });
+                this.animationHandler.playOnce('cast-forward')
+                    .then(this.setState);
+                // this.animationHandler.
                 break;
             default:
                 this.collisionBody.velocity.set(0, 0);

@@ -3,6 +3,7 @@ import { Vector2 } from 'three';
 import { EventListener } from '../common/EventListener';
 
 export default class CollisionBody {
+    active: boolean;
     position: Vector2;
     radius: number;
     velocity = new Vector2();
@@ -58,7 +59,7 @@ export default class CollisionBody {
         for (let i = 0; i < nearCollisionBodyCount; i++) {
             collisionBody = nearCollisionBodies[i];
 
-            if (collisionBody === this) {
+            if (!collisionBody.active || collisionBody === this) {
                 continue;
             }
 
