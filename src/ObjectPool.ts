@@ -32,6 +32,9 @@ export default class ObjectPool<O extends PoolItem> {
      * replace the current item with the last active, if it is not last
      */
     release = (item: O) => {
+        if (item.active === false) {
+            throw new Error(`ObjectPool->release($item) Not active $item: ${JSON.stringify(item)}`);
+        }
         this.activeCount--;
         item.active = false;
 
@@ -51,5 +54,11 @@ export default class ObjectPool<O extends PoolItem> {
 
         this.items[this.activeCount] = this.items[index];
         this.items[index] = lastActive;
+    }
+
+    forActive = (callback: (item: O) => void) => {
+        for (let i = this.activeCount - 1; i >= 0; i--) {
+            callback.call(this, this.items[i]);
+        }
     }
 }

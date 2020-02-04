@@ -19,12 +19,14 @@ export default class CollisionBody {
     }
 
     reConstruct(radius: number, x = 0, y = 0) {
+        this.listener.clear();
         this.position.set(x, y);
         this.velocity.set(0, 0);
         this.orbitAxis.set(0, 0);
         this.orbitalVelocity = 0;
         this.radius = radius;
-        this.listener.clear();
+
+        return this;
     }
 
     move(timeStep: number, nearCollisionBodies: CollisionBody[]) {

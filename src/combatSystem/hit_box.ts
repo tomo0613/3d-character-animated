@@ -2,6 +2,7 @@ import { Object3D, Vector2 } from 'three';
 
 import CollisionBody from '../physicsSimulator/CollisionBody';
 import Entity from '../entity/Entity';
+import { EventListener } from '../common/EventListener';
 import physicsSimulator from '../physicsSimulator/simulator';
 
 const tmp_hitBoxPositionOffset = new Vector2();
@@ -12,12 +13,13 @@ export class HitBox {
     private lifeSpan = Infinity;
     private lifeTime = 0;
     private collisionBody: CollisionBody;
+    listener = new EventListener<'hit'|'lifeSpanExpiration'>();
     radius = 2;
     visualEffect: Object3D;
-    onHit: (collidingBodies: CollisionBody[]) => void;
     onLifeSpanExpiration: () => void;
 
     spawn(owner: Entity, { angularSpeed = 0, distance = 10, rotation = 0, speed = 0, lifeSpan = Infinity }) {
+        // radius
         this.lifeTime = 0;
         this.lifeSpan = lifeSpan;
         tmp_hitBoxPositionOffset.copy(owner.direction).multiplyScalar(distance);
@@ -29,11 +31,13 @@ export class HitBox {
         this.collisionBody.orbitAxis.copy(owner.position);
         this.collisionBody.orbitalVelocity = angularSpeed;
         this.collisionBody.velocity.copy(owner.direction).multiplyScalar(speed);
-        // ToDo destroy
         this.collisionBody.listener.add('collision', this.onHit);
+
+        return this;
     }
 
-    private destroy() {
+    destroy() {
+        this.listener.clear();
         physicsSimulator.releaseCollisionBody(this.collisionBody);
         this.collisionBody = undefined;
     }
@@ -43,7 +47,7 @@ export class HitBox {
             this.lifeTime += dt;
 
             if (this.lifeTime >= this.lifeSpan) {
-                this.onLifeSpanExpiration();
+                this.listener.dispatch('lifeSpanExpiration');
                 this.destroy();
                 return;
             }
@@ -53,5 +57,9 @@ export class HitBox {
             this.visualEffect.position.x = this.collisionBody.position.x;
             this.visualEffect.position.z = this.collisionBody.position.y;
         }
+    }
+
+    private onHit = (collidingBodies: CollisionBody[]) => {
+        this.listener.dispatch('hit', collidingBodies);
     }
 }

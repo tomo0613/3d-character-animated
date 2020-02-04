@@ -14,7 +14,6 @@ export enum State {
     DEATH = 'DEATH',
 }
 
-
 const yAxis = new THREE.Vector3(0, 1, 0);
 
 export default class Entity {
@@ -22,7 +21,7 @@ export default class Entity {
     animationHandler: AnimationHandler;
     animationMixer: THREE.AnimationMixer;
     pathFinder: PathFinder;
-    collisionBody = physicsSimulator.obtainCollisionBody();
+    collisionBody: CollisionBody;
     direction = new THREE.Vector2(1, 0);
     attackSpeed = 1;
     movementSpeed = 14; // 1
@@ -35,7 +34,7 @@ export default class Entity {
         this.animationMixer = new THREE.AnimationMixer(model.scene);
         this.animationHandler = new AnimationHandler(this.animationMixer, model.animations, animationConfig);
 
-        this.collisionBody.reConstruct(4);
+        this.collisionBody = physicsSimulator.obtainCollisionBody().reConstruct(4);
         this.collisionBody.listener.add('collision', this.onCollision);
 
         this.animationHandler.playDefault();

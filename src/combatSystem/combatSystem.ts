@@ -4,48 +4,38 @@ import { ActionController, AnimationInfo } from './ActionController';
 import Entity from '../entity/Entity';
 import { HitBox } from './hit_box';
 import ObjectPool from '../ObjectPool';
+import CollisionBody from '../physicsSimulator/CollisionBody';
 
 const hitBoxPool = new ObjectPool<HitBox>(5, HitBox);
 const actionControllers = new Map<Entity, ActionController>();
 let gScene: Scene;
-let dt = 0;
-
-function obtainActionController(owner: Entity, animationInfo: AnimationInfo) {
-    // ToDo animation + s
-    if (actionControllers.has(owner)) {
-        return actionControllers.get(owner);
-    }
-    const actionController = new ActionController(owner, animationInfo);
-    actionControllers.set(owner, actionController);
-
-    return actionController;
-}
-
-function updateActionController(actionController: ActionController) {
-    actionController.update(dt);
-}
+let deltaTime = 0;
 
 const actions = {
     castFireball(actionController: ActionController) {
         // ToDo get config
         const effect = vfx();
-        const hitBox = hitBoxPool.obtain();
-        hitBox.onHit = (c) => {
-            console.log('HitBox hit', c.length, c[0]);
-            hitBoxPool.release(hitBox);
-            gScene.remove(effect);
-        };
-        hitBox.spawn(actionController.owner, {
+        const hitBox = hitBoxPool.obtain().spawn(actionController.owner, {
             lifeSpan: 3,
             distance: 7,
             speed: 100,
         });
+        hitBox.listener.add('hit', (collidingBodies: CollisionBody[]) => {
+            console.log('HIT - deal damage');
+            hitBox.destroy();
+            gScene.remove(effect);
+            hitBoxPool.release(hitBox);
+        });
+        hitBox.listener.add('lifeSpanExpiration', () => {
+            console.log('EXPIRY');
+            // destroyed
+            gScene.remove(effect);
+            hitBoxPool.release(hitBox);
+        });
+
+
         hitBox.visualEffect = effect;
         gScene.add(effect);
-        hitBox.onLifeSpanExpiration = () => {
-            hitBoxPool.release(hitBox);
-            gScene.remove(effect);
-        };
     },
     swordSlash() {
         const cfg = {
@@ -70,16 +60,32 @@ export default {
         actionController.listener.add('strike', actions[type]);
         actionController.start();
     },
-    update(delta: number) {
-        dt = delta;
-
+    update(dt: number) {
+        deltaTime = dt;
         actionControllers.forEach(updateActionController);
-
-        for (let i = hitBoxPool.activeCount - 1; i >= 0; i--) {
-            hitBoxPool.items[i].update(dt);
-        }
+        hitBoxPool.forActive(updateHitBox);
     },
 };
+
+function obtainActionController(owner: Entity, animationInfo: AnimationInfo) {
+    // ToDo animation + s
+    if (actionControllers.has(owner)) {
+        return actionControllers.get(owner);
+    }
+    const actionController = new ActionController(owner, animationInfo);
+    actionControllers.set(owner, actionController);
+
+    return actionController;
+}
+
+function updateActionController(actionController: ActionController) {
+    actionController.update(deltaTime);
+}
+
+function updateHitBox(hitBox: HitBox) {
+    hitBox.update(deltaTime);
+}
+
 
 function vfx() {
     const material = new MeshBasicMaterial({ color: 0xff0000 });
@@ -89,15 +95,6 @@ function vfx() {
 
     return cube;
 }
-
-// private onHit = (collidingBodies: CollisionBody[]) => {
-//     console.log(
-//         'deal damage',
-//         collidingBodies.length,
-//         JSON.stringify(collidingBodies[0].position),
-//         JSON.stringify(this.hitBox.position),
-//     );
-// }
 
 // this.abilities.attack1 = new Attack(this, {
 //     animationName: 'cast-forward',
