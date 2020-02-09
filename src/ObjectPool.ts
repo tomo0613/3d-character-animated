@@ -36,6 +36,7 @@ export default class ObjectPool<O extends PoolItem> {
             throw new Error(`ObjectPool->release($item) Not active $item: ${JSON.stringify(item)}`);
         }
         this.activeCount--;
+        // eslint-disable-next-line no-param-reassign
         item.active = false;
 
         if (!this.activeCount) {

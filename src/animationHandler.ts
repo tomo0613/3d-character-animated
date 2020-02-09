@@ -65,6 +65,7 @@ export default class AnimationHandler {
     }
 
     start = (animationAction: AnimationAction) => {
+        /* eslint-disable no-param-reassign */
         animationAction.time = 0;
         animationAction.enabled = true;
         animationAction.setEffectiveTimeScale(1);

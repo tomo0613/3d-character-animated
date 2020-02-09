@@ -3,6 +3,7 @@ import { Object3D, Vector2 } from 'three';
 import CollisionBody from '../physicsSimulator/CollisionBody';
 import Entity from '../entity/Entity';
 import { EventListener } from '../common/EventListener';
+import { ParticleSystem } from '../vfx/ParticleSystem';
 import physicsSimulator from '../physicsSimulator/simulator';
 
 const tmp_hitBoxPositionOffset = new Vector2();
@@ -10,18 +11,17 @@ const tmp_hitBoxInitialPosition = new Vector2();
 
 export class HitBox {
     active: boolean;
-    private lifeSpan = Infinity;
+    private ttl = Infinity;
     private lifeTime = 0;
     private collisionBody: CollisionBody;
-    listener = new EventListener<'hit'|'lifeSpanExpiration'>();
+    listener = new EventListener<'hit'|'ttlExpired'>();
     radius = 2;
-    visualEffect: Object3D;
-    onLifeSpanExpiration: () => void;
+    visualEffect: Object3D|ParticleSystem;
 
-    spawn(owner: Entity, { angularSpeed = 0, distance = 10, rotation = 0, speed = 0, lifeSpan = Infinity }) {
+    spawn(owner: Entity, { angularSpeed = 0, distance = 10, rotation = 0, speed = 0, ttl = Infinity }) {
         // radius
         this.lifeTime = 0;
-        this.lifeSpan = lifeSpan;
+        this.ttl = ttl;
         tmp_hitBoxPositionOffset.copy(owner.direction).multiplyScalar(distance);
         tmp_hitBoxInitialPosition.copy(owner.position).add(tmp_hitBoxPositionOffset);
         tmp_hitBoxInitialPosition.rotateAround(owner.position, rotation);
@@ -43,11 +43,11 @@ export class HitBox {
     }
 
     update(dt: number) {
-        if (this.lifeSpan < Infinity) {
+        if (this.ttl < Infinity) {
             this.lifeTime += dt;
 
-            if (this.lifeTime >= this.lifeSpan) {
-                this.listener.dispatch('lifeSpanExpiration');
+            if (this.lifeTime >= this.ttl) {
+                this.listener.dispatch('ttlExpired');
                 this.destroy();
                 return;
             }
@@ -56,6 +56,10 @@ export class HitBox {
         if (this.visualEffect) {
             this.visualEffect.position.x = this.collisionBody.position.x;
             this.visualEffect.position.z = this.collisionBody.position.y;
+
+            if (this.visualEffect instanceof ParticleSystem) {
+                this.visualEffect.update(dt);
+            }
         }
     }
 

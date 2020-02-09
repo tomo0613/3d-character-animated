@@ -51,7 +51,7 @@ export default class Entity {
                 yAxis,
                 -Math.atan2(this.collisionBody.velocity.y, this.collisionBody.velocity.x),
             );
-            this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.15);
+            this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.1);
         }
 
         this.animationMixer.update(elapsedTimeS);

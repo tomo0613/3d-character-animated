@@ -1,4 +1,4 @@
-import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 const progressDisplayContainer = document.getElementById('progress-display-container');
 const supportedExtensions = ['GLB', 'GLTF'];
@@ -71,13 +71,14 @@ function loadModel(resourceUrl: string) {
 }
 
 function bytesToReadable(value: number, scale: 'k'|'M'|'G'|'T') {
+    let result = value;
     const n = ['k', 'M', 'G', 'T'].indexOf(scale) + 1;
 
     for (let i = 0; i < n; i++) {
-        value /= 1024;
+        result /= 1024;
     }
 
-    return value.toFixed(2);
+    return result.toFixed(2);
 }
 
 function debounce(fnc: Function, delay = 200, immediate = false) {
@@ -113,4 +114,12 @@ function throttle(fnc: Function, timeToWaitBeforeNextCall = 200) {
             }, timeToWaitBeforeNextCall - (timeStamp - prevCallTime));
         }
     };
+}
+
+export function randomNumberBetween(a: number, b: number) {
+    const max = Math.max(a, b)
+    const min = Math.min(a, b)
+    const range = max - min;
+
+    return max - Math.random() * range;
 }

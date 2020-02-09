@@ -1,10 +1,11 @@
 import { Mesh, MeshBasicMaterial, Scene, SphereBufferGeometry } from 'three';
 
 import { ActionController, AnimationInfo } from './ActionController';
+import CollisionBody from '../physicsSimulator/CollisionBody';
 import Entity from '../entity/Entity';
 import { HitBox } from './hit_box';
 import ObjectPool from '../ObjectPool';
-import CollisionBody from '../physicsSimulator/CollisionBody';
+import effects from '../vfx/effects';
 
 const hitBoxPool = new ObjectPool<HitBox>(5, HitBox);
 const actionControllers = new Map<Entity, ActionController>();
@@ -14,28 +15,34 @@ let deltaTime = 0;
 const actions = {
     castFireball(actionController: ActionController) {
         // ToDo get config
-        const effect = vfx();
+        // const effect = vfx();
+        const effect = effects.fireBall;
         const hitBox = hitBoxPool.obtain().spawn(actionController.owner, {
-            lifeSpan: 3,
+            ttl: 3,
             distance: 7,
-            speed: 100,
+            rotation: 0.5,
+            speed: 150,
         });
         hitBox.listener.add('hit', (collidingBodies: CollisionBody[]) => {
             console.log('HIT - deal damage');
             hitBox.destroy();
-            gScene.remove(effect);
+            // gScene.remove(effect);
+            gScene.remove(effect.particles);
             hitBoxPool.release(hitBox);
         });
-        hitBox.listener.add('lifeSpanExpiration', () => {
+        hitBox.listener.add('ttlExpired', () => {
             console.log('EXPIRY');
             // destroyed
-            gScene.remove(effect);
+            // gScene.remove(effect);
+            gScene.remove(effect.particles);
             hitBoxPool.release(hitBox);
         });
 
-
+        effect.position.y = 13;
+        effect.rotation.y = actionController.owner.model.rotation.y;
         hitBox.visualEffect = effect;
-        gScene.add(effect);
+        // gScene.add(effect);
+        gScene.add(effect.particles);
     },
     swordSlash() {
         const cfg = {

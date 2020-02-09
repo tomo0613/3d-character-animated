@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { Fire } from 'three/examples/jsm/objects/Fire';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
@@ -9,6 +8,7 @@ import Entity from './entity/Entity';
 import combatSystem from './combatSystem/combatSystem';
 import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
+import { ParticleSystem } from './vfx/ParticleSystem';
 
 export type FBX = THREE.Group & {
     animations: THREE.AnimationClip[];
@@ -45,40 +45,7 @@ async function init() {
     );
     const scene = new THREE.Scene();
     buildEnvironment(scene);
-    // ////////////////////////////////////////////////////////////
 
-    const plane = new THREE.PlaneBufferGeometry(10, 15);
-    const [f1] = Array.from({ length: 1 }).map(() => {
-        const fire = new Fire(plane, {
-            textureWidth: 256,
-            textureHeight: 256,
-            colorBias: 0.96,
-            diffuse: 3.0,
-            viscosity: 0,
-            expansion: -0.2,
-            drag: 0,
-            airSpeed: 35.0,
-        });
-        fire.addSource(0.5, 0.1, 0.1, 1.0, 0.0, 1.0);
-        fire.position.set(10, 20, 10);
-        scene.add(fire);
-
-        fire.traverse((node: any) => {
-            if (node.material) {
-                node.material.opacity = 0.5;
-                node.material.transparent = true;
-                node.material.side = THREE.DoubleSide;
-            }
-        });
-
-        return fire;
-    });
-
-    f1.rotation.y = -Math.PI / 2;
-    // f2.rotation.y = -Math.PI / 2;
-    // fire.rotation.x = -Math.PI / 2;
-
-    // ////////////////////////////////////////////////////////////
     let sorceressGLTF: GLTF;
     let paladinGLTF: GLTF;
 
@@ -115,6 +82,20 @@ async function init() {
     });
     companion.position.set(10, -10);
 
+    // ToDo rm
+    const fireBall = new ParticleSystem({
+        count: 100,
+        size: 50,
+        speed: 0.1,
+        rotationSpeed: 0.1,
+        maxDistance: 50,
+        radius: 2,
+        colorValue: 0xF77B0E,
+    });
+    fireBall.position.set(0, 13, 10);
+    fireBall.rotation.y = 1;
+    scene.add(fireBall.particles);
+
     initCharacterAnimationController(character);
     const renderCollisionBodies = initPhysicsDebugRender(physicsSimulator, scene);
     const entities = [character, companion];
@@ -136,6 +117,9 @@ async function init() {
         for (let i = 0; i < entityCount; i++) {
             entities[i].update(dt);
         }
+
+        // ToDo rm
+        fireBall.update(dt);
 
         updateCamera();
         renderer.render(scene, camera);
@@ -181,7 +165,7 @@ function initCamera(camera: THREE.PerspectiveCamera, targetPosition: THREE.Vecto
     // cameraController.target = new THREE.Vector3(0, 10, 0);
     // cameraController.minDistance = 10;
     // cameraController.update();
-    const cameraPositionOffset = new THREE.Vector3(-50, 30, 0);
+    const cameraPositionOffset = new THREE.Vector3(-100, 50, 0);
     const cameraDirectionOffset = new THREE.Vector3(0, 10, 0);
     const cameraPosition = new THREE.Vector3();
     const cameraDirection = new THREE.Vector3();

@@ -9,11 +9,20 @@ export enum EventType {
 }
 
 const listener = new EventListener<EventType>();
-const browserNavigationKeys = new Set([
+const browserControlsToIgnore = new Set([
     ' ',
     'Home', 'End',
     'PageUp', 'PageDown',
-    'ArrowUp', 'ArrowRight', 'ArrowLeft', 'ArrowDown',
+    'ArrowUp', 'ArrowDown',
+    'ArrowRight', 'ArrowLeft',
+    'D', // Ctrl + D – bookmark
+    'F', // Ctrl + F – search
+    'H', // Ctrl + H – browsing history
+    'J', // Ctrl + J – download history
+    'O', // Ctrl + O – open a file from your computer
+    'P', // Ctrl + P – print
+    'S', // Ctrl + S – save the page to your computer
+    'U', // Ctrl + U – source code.
 ]);
 
 export default {
@@ -93,9 +102,9 @@ function init(scene: THREE.Scene, camera: THREE.Camera, canvas: HTMLCanvasElemen
 }
 
 function onKeyDown(e: KeyboardEvent) {
-    // prevent page scrolling
-    if (browserNavigationKeys.has(e.key)) {
-        e.preventDefault(); // ToDo prevent ctrl+f/s/w...
+    // prevent page scrolling & shortcuts
+    if (isBrowserControl(e)) {
+        e.preventDefault();
     }
     if (e.repeat) {
         return;
@@ -105,4 +114,10 @@ function onKeyDown(e: KeyboardEvent) {
 
 function onKeyUp({ key }: KeyboardEvent) {
     listener.dispatch(EventType.KEY_UP, key.toUpperCase());
+}
+
+function isBrowserControl(e: KeyboardEvent) {
+    /* eslint-disable no-mixed-operators */
+    return e.ctrlKey && e.key.length === 1 && browserControlsToIgnore.has(e.key.toUpperCase())
+        || browserControlsToIgnore.has(e.key);
 }
