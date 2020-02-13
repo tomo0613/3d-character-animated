@@ -1,4 +1,5 @@
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { Texture, TextureLoader } from 'three';
 
 const progressDisplayContainer = document.getElementById('progress-display-container');
 const supportedExtensions = ['GLB', 'GLTF'];
@@ -7,6 +8,7 @@ export default {
     debounce,
     throttle,
     loadModel,
+    loadTexture,
 };
 
 function loadModel(resourceUrl: string) {
@@ -16,7 +18,7 @@ function loadModel(resourceUrl: string) {
     const extension = resourceUrl.split('.').pop().toUpperCase();
 
     if (!supportedExtensions.includes(extension)) {
-        return Promise.reject(new Error(`Failed to load resource: "${resourceUrl}" due it has unsupported extension`));
+        return Promise.reject(new Error(`Failed to load model: "${resourceUrl}" due it has unsupported extension`));
     }
 
     return new Promise<GLTF>((resolve, reject) => {
@@ -24,7 +26,7 @@ function loadModel(resourceUrl: string) {
             resolve(resource);
         };
         const onError = (e) => {
-            console.error(`Failed to load resource: ${e}`);
+            console.error(`Failed to load model: ${e}`);
             reject(e);
         };
 
@@ -68,6 +70,22 @@ function loadModel(resourceUrl: string) {
             }
         });
     }
+}
+
+function loadTexture(resourceUrl: string) {
+    const loader = new TextureLoader();
+
+    return new Promise<Texture>((resolve, reject) => {
+        const onLoad = (resource: Texture) => {
+            resolve(resource);
+        };
+        const onError = (e) => {
+            console.error(`Failed to load texture: ${e}`);
+            reject(e);
+        };
+
+        loader.load(resourceUrl, onLoad, undefined, onError);
+    });
 }
 
 function bytesToReadable(value: number, scale: 'k'|'M'|'G'|'T') {
@@ -117,8 +135,8 @@ function throttle(fnc: Function, timeToWaitBeforeNextCall = 200) {
 }
 
 export function randomNumberBetween(a: number, b: number) {
-    const max = Math.max(a, b)
-    const min = Math.min(a, b)
+    const max = Math.max(a, b);
+    const min = Math.min(a, b);
     const range = max - min;
 
     return max - Math.random() * range;

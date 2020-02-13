@@ -6,9 +6,9 @@ import inputHandler, { EventType } from './inputHandler';
 import CONFIG from './config';
 import Entity from './entity/Entity';
 import combatSystem from './combatSystem/combatSystem';
+import effects from './visualEffects/effects';
 import physicsSimulator from './physicsSimulator/simulator';
 import utils from './utils';
-import { ParticleSystem } from './vfx/ParticleSystem';
 
 export type FBX = THREE.Group & {
     animations: THREE.AnimationClip[];
@@ -48,11 +48,13 @@ async function init() {
 
     let sorceressGLTF: GLTF;
     let paladinGLTF: GLTF;
+    let particleTexture: THREE.Texture;
 
     try {
-        [sorceressGLTF, paladinGLTF] = await Promise.all([
+        [sorceressGLTF, paladinGLTF, particleTexture] = await Promise.all([
             utils.loadModel('assets/3D-Objects/Sorceress.glb'),
             utils.loadModel('assets/3D-Objects/Paladin.glb'),
+            utils.loadTexture('assets/sprites/particle1.png'),
         ]);
     } catch (e) {
         console.error(e);
@@ -63,8 +65,6 @@ async function init() {
 
     sorceressModel.traverse(setMeshProperties);
     paladinModel.traverse(setMeshProperties);
-
-    const updateCamera = initCamera(camera, sorceressModel.position);
 
     const character = new Entity(sorceressGLTF, scene, {
         default: 'idle',
@@ -82,19 +82,8 @@ async function init() {
     });
     companion.position.set(10, -10);
 
-    // ToDo rm
-    const fireBall = new ParticleSystem({
-        count: 100,
-        size: 50,
-        speed: 0.1,
-        rotationSpeed: 0.1,
-        maxDistance: 50,
-        radius: 2,
-        colorValue: 0xF77B0E,
-    });
-    fireBall.position.set(0, 13, 10);
-    fireBall.rotation.y = 1;
-    scene.add(fireBall.particles);
+    const updateCamera = initCamera(camera, character);
+    const updateEffects = effects.init(scene, particleTexture);
 
     initCharacterAnimationController(character);
     const renderCollisionBodies = initPhysicsDebugRender(physicsSimulator, scene);
@@ -118,16 +107,13 @@ async function init() {
             entities[i].update(dt);
         }
 
-        // ToDo rm
-        fireBall.update(dt);
-
+        updateEffects(dt);
         updateCamera();
         renderer.render(scene, camera);
 
         requestAnimationFrame(render);
     }
 
-    combatSystem.init(scene);
     physicsSimulator.start();
     render();
 
@@ -160,12 +146,8 @@ function setMeshProperties(node: any/* ToDo THREE.Object3D & THREE.Mesh */) {
     }
 }
 
-function initCamera(camera: THREE.PerspectiveCamera, targetPosition: THREE.Vector3) {
-    // const cameraController = new OrbitControls(camera);
-    // cameraController.target = new THREE.Vector3(0, 10, 0);
-    // cameraController.minDistance = 10;
-    // cameraController.update();
-    const cameraPositionOffset = new THREE.Vector3(-100, 50, 0);
+function initCamera(camera: THREE.PerspectiveCamera, target: Entity) {
+    const cameraPositionOffset = new THREE.Vector3(-100, 70, 0);
     const cameraDirectionOffset = new THREE.Vector3(0, 10, 0);
     const cameraPosition = new THREE.Vector3();
     const cameraDirection = new THREE.Vector3();
@@ -175,11 +157,46 @@ function initCamera(camera: THREE.PerspectiveCamera, targetPosition: THREE.Vecto
     return updateCameraPosition;
 
     function updateCameraPosition() {
-        cameraPosition.copy(targetPosition).add(cameraPositionOffset);
-        cameraDirection.copy(targetPosition).add(cameraDirectionOffset);
+        cameraPosition.copy(target.model.position).add(cameraPositionOffset);
+        cameraDirection.copy(target.model.position).add(cameraDirectionOffset);
         camera.position.copy(cameraPosition);
         camera.lookAt(cameraDirection);
     }
+    // const cameraController = new OrbitControls(camera);
+    // cameraController.target.copy(target.model.position);
+    // cameraController.minDistance = 10;
+    // camera.position.set(-100, 50, 0);
+    // cameraController.update();
+
+    // return () => {};
+
+    // leave trail over time for lerp-ing Vec3[]
+    /*
+    const cameraTargetDistance = 80;
+    const cameraHeight = 50;
+    const targetHeight = 13;
+    const cameraTargetPosition = new THREE.Vector3();
+    const cameraPosition2d = new THREE.Vector2();
+    const cameraDirection2d = new THREE.Vector2();
+    let cameraSpeed = 0.005;
+    let cameraDistance = 0;
+
+    camera.position.set(-cameraTargetDistance, cameraHeight, 0);
+
+    return updateCameraPosition;
+
+    function updateCameraPosition() {
+        cameraDirection2d.set(0, 0).sub(target.direction).multiplyScalar(cameraTargetDistance);
+        cameraPosition2d.copy(target.position).add(cameraDirection2d);
+        cameraDistance = target.position.distanceTo(cameraPosition2d);
+        cameraSpeed = cameraDistance > cameraTargetDistance ? 0.01 : 0.005;
+
+        cameraTargetPosition.set(cameraPosition2d.x, cameraHeight, cameraPosition2d.y);
+
+        camera.position.lerp(cameraTargetPosition, cameraSpeed);
+        camera.lookAt(target.position.x, targetHeight, target.position.y);
+    }
+    */
 }
 
 // ToDo rm

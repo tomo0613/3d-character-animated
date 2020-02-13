@@ -3,7 +3,7 @@ import { Object3D, Vector2 } from 'three';
 import CollisionBody from '../physicsSimulator/CollisionBody';
 import Entity from '../entity/Entity';
 import { EventListener } from '../common/EventListener';
-import { ParticleSystem } from '../vfx/ParticleSystem';
+import { ParticleSystem } from '../visualEffects/ParticleSystem';
 import physicsSimulator from '../physicsSimulator/simulator';
 
 const tmp_hitBoxPositionOffset = new Vector2();
@@ -56,10 +56,6 @@ export class HitBox {
         if (this.visualEffect) {
             this.visualEffect.position.x = this.collisionBody.position.x;
             this.visualEffect.position.z = this.collisionBody.position.y;
-
-            if (this.visualEffect instanceof ParticleSystem) {
-                this.visualEffect.update(dt);
-            }
         }
     }
 

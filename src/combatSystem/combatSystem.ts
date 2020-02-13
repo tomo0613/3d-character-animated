@@ -1,48 +1,48 @@
-import { Mesh, MeshBasicMaterial, Scene, SphereBufferGeometry } from 'three';
-
 import { ActionController, AnimationInfo } from './ActionController';
 import CollisionBody from '../physicsSimulator/CollisionBody';
 import Entity from '../entity/Entity';
 import { HitBox } from './hit_box';
 import ObjectPool from '../ObjectPool';
-import effects from '../vfx/effects';
+import effects from '../visualEffects/effects';
 
 const hitBoxPool = new ObjectPool<HitBox>(5, HitBox);
 const actionControllers = new Map<Entity, ActionController>();
-let gScene: Scene;
 let deltaTime = 0;
 
 const actions = {
     castFireball(actionController: ActionController) {
-        // ToDo get config
-        // const effect = vfx();
         const effect = effects.fireBall;
+        const effect2 = effects.explosion;
         const hitBox = hitBoxPool.obtain().spawn(actionController.owner, {
             ttl: 3,
             distance: 7,
             rotation: 0.5,
-            speed: 150,
+            speed: 120,
         });
         hitBox.listener.add('hit', (collidingBodies: CollisionBody[]) => {
             console.log('HIT - deal damage');
             hitBox.destroy();
-            // gScene.remove(effect);
-            gScene.remove(effect.particles);
+            effect.clear();
+            effect2.render();
+            // ToDo async
+            setTimeout(() => {
+                effect2.clear();
+            }, 2000);
+
             hitBoxPool.release(hitBox);
         });
         hitBox.listener.add('ttlExpired', () => {
             console.log('EXPIRY');
+            effect.clear();
             // destroyed
-            // gScene.remove(effect);
-            gScene.remove(effect.particles);
             hitBoxPool.release(hitBox);
         });
 
         effect.position.y = 13;
+        // ToDo fix rotation
         effect.rotation.y = actionController.owner.model.rotation.y;
         hitBox.visualEffect = effect;
-        // gScene.add(effect);
-        gScene.add(effect.particles);
+        effect.render();
     },
     swordSlash() {
         const cfg = {
@@ -57,9 +57,6 @@ const actions = {
 };
 
 export default {
-    init(scene: Scene) {
-        gScene = scene;
-    },
     initAction(owner: Entity, type: keyof typeof actions, animationInfo: AnimationInfo) {
         const actionController = obtainActionController(owner, animationInfo);
 
@@ -91,16 +88,6 @@ function updateActionController(actionController: ActionController) {
 
 function updateHitBox(hitBox: HitBox) {
     hitBox.update(deltaTime);
-}
-
-
-function vfx() {
-    const material = new MeshBasicMaterial({ color: 0xff0000 });
-    const geometry = new SphereBufferGeometry(2, 4, 4);
-    const cube = new Mesh(geometry, material);
-    cube.position.y = 10;
-
-    return cube;
 }
 
 // this.abilities.attack1 = new Attack(this, {
