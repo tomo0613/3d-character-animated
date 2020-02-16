@@ -8,6 +8,9 @@ import physicsSimulator from '../physicsSimulator/simulator';
 
 const tmp_hitBoxPositionOffset = new Vector2();
 const tmp_hitBoxInitialPosition = new Vector2();
+const hitBoxCollisionBodyProps = {
+    radius: 2,
+};
 
 export class HitBox {
     active: boolean;
@@ -15,7 +18,6 @@ export class HitBox {
     private lifeTime = 0;
     private collisionBody: CollisionBody;
     listener = new EventListener<'hit'|'ttlExpired'>();
-    radius = 2;
     visualEffect: Object3D|ParticleSystem;
 
     spawn(owner: Entity, { angularSpeed = 0, distance = 10, rotation = 0, speed = 0, ttl = Infinity }) {
@@ -26,8 +28,8 @@ export class HitBox {
         tmp_hitBoxInitialPosition.copy(owner.position).add(tmp_hitBoxPositionOffset);
         tmp_hitBoxInitialPosition.rotateAround(owner.position, rotation);
 
-        this.collisionBody = physicsSimulator.obtainCollisionBody();
-        this.collisionBody.reConstruct(this.radius, tmp_hitBoxInitialPosition.x, tmp_hitBoxInitialPosition.y);
+        this.collisionBody = physicsSimulator.obtainCollisionBody().construct(hitBoxCollisionBodyProps);
+        this.collisionBody.position.set(tmp_hitBoxInitialPosition.x, tmp_hitBoxInitialPosition.y);
         this.collisionBody.orbitAxis.copy(owner.position);
         this.collisionBody.orbitalVelocity = angularSpeed;
         this.collisionBody.velocity.copy(owner.direction).multiplyScalar(speed);

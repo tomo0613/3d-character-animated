@@ -15,6 +15,10 @@ export enum State {
 }
 
 const yAxis = new THREE.Vector3(0, 1, 0);
+const entityCollisionBodyProps = {
+    radius: 4,
+    blocking: true,
+};
 
 export default class Entity {
     model: THREE.Object3D;
@@ -34,7 +38,7 @@ export default class Entity {
         this.animationMixer = new THREE.AnimationMixer(model.scene);
         this.animationHandler = new AnimationHandler(this.animationMixer, model.animations, animationConfig);
 
-        this.collisionBody = physicsSimulator.obtainCollisionBody().reConstruct(4);
+        this.collisionBody = physicsSimulator.obtainCollisionBody().construct(entityCollisionBodyProps);
         this.collisionBody.listener.add('collision', this.onCollision);
 
         this.animationHandler.playDefault();
@@ -51,7 +55,9 @@ export default class Entity {
                 yAxis,
                 -Math.atan2(this.collisionBody.velocity.y, this.collisionBody.velocity.x),
             );
-            this.model.quaternion.slerp(this.tmp_targetQuaternion, 0.1);
+        }
+        if (!this.model.quaternion.equals(this.tmp_targetQuaternion)) {
+            this.model.quaternion.rotateTowards(this.tmp_targetQuaternion, 0.1);
         }
 
         this.animationMixer.update(elapsedTimeS);

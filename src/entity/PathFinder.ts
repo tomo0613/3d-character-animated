@@ -3,6 +3,10 @@ import { Vector2 } from 'three';
 import CollisionBody from '../physicsSimulator/CollisionBody';
 import physicsSimulator from '../physicsSimulator/simulator';
 
+const targetAreaCollisionBodyProps = {
+    radius: 1,
+};
+
 export default class PathFinder {
     originPosition = new Vector2();
     targetPosition = new Vector2();
@@ -10,7 +14,8 @@ export default class PathFinder {
 
     async setTarget(x: number, y: number) {
         this.targetPosition.set(x, y);
-        this.targetArea = physicsSimulator.obtainCollisionBody().reConstruct(1, x, y);
+        this.targetArea = physicsSimulator.obtainCollisionBody().construct(targetAreaCollisionBodyProps);
+        this.targetArea.position.set(x, y);
 
         return this.targetArea;
     }

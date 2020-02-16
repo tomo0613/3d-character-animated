@@ -2,10 +2,15 @@ import { Vector2 } from 'three';
 
 import { EventListener } from '../common/EventListener';
 
+interface CollisionBodyProps {
+    radius: number;
+    blocking?: boolean;
+}
+
 export default class CollisionBody {
     active: boolean;
-    position: Vector2;
     radius: number;
+    position = new Vector2();
     velocity = new Vector2();
     orbitAxis = new Vector2();
     orbitalVelocity = 0;
@@ -13,17 +18,16 @@ export default class CollisionBody {
     listener = new EventListener<'collision'>();
     collidingBodies: CollisionBody[] = [];
 
-    constructor(radius: number, x = 0, y = 0) {
-        this.position = new Vector2(x, y);
-        this.radius = radius;
+    constructor(props: CollisionBodyProps) {
+        this.construct(props);
     }
 
-    reConstruct(radius: number, x = 0, y = 0) {
+    construct({ radius, blocking = false }: CollisionBodyProps) {
         this.listener.clear();
-        this.position.set(x, y);
         this.velocity.set(0, 0);
         this.orbitAxis.set(0, 0);
         this.orbitalVelocity = 0;
+        this.blocking = blocking;
         this.radius = radius;
 
         return this;

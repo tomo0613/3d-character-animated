@@ -2,7 +2,7 @@ import CollisionBody from './CollisionBody';
 import ObjectPool from '../ObjectPool';
 import loopInterface from './loop';
 
-const collisionBodyPool = new ObjectPool<CollisionBody>(10, CollisionBody, [1]);
+const collisionBodyPool = new ObjectPool(10, CollisionBody, [1]);
 let deltaTime: number;
 
 loopInterface.update = (dt: number) => {

@@ -61,5 +61,9 @@ export default class ObjectPool<O extends PoolItem> {
         for (let i = this.activeCount - 1; i >= 0; i--) {
             callback.call(this, this.items[i]);
         }
+        // let i = this.activeCount;
+        // while (i--) {
+        //     callback.call(this, this.items[i]);
+        // }
     }
 }

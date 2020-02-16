@@ -42,8 +42,9 @@ type BufferGeometryAttributeSetter = {
 }
 
 export class ParticleSystem {
+    active = false;
+    isHidden = true;
     particles: THREE.Points;
-    private active = false;
     private geometry = new THREE.BufferGeometry() as THREE.BufferGeometry & BufferGeometryAttributeSetter;
     private particleCount: number;
     private initialParticleCount: number;
@@ -126,6 +127,10 @@ export class ParticleSystem {
         return this.particles.position;
     }
 
+    get quaternion() {
+        return this.particles.quaternion;
+    }
+
     get rotation() {
         return this.particles.rotation;
     }
@@ -158,14 +163,14 @@ export class ParticleSystem {
     }
 
     render = () => {
-        if (!this.active) {
+        if (this.isHidden) {
+            this.isHidden = false;
             this.particles.visible = true;
-            this.active = true;
         }
     }
 
     clear = () => {
-        this.active = false;
+        this.isHidden = true;
         this.particles.visible = false;
         this.lifeTime = 0;
         this.distanceTraveledSinceLastEmission = 0;
@@ -174,7 +179,7 @@ export class ParticleSystem {
     }
 
     update = (dt: number) => {
-        if (!this.active) {
+        if (this.isHidden) {
             return;
         }
         if (this.lifeTime) {

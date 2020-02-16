@@ -80,7 +80,7 @@ async function init() {
         ATTACK: 'slash_inward',
         DEATH: 'collapse',
     });
-    companion.position.set(10, -10);
+    companion.position.set(50, 0);
 
     const updateCamera = initCamera(camera, character);
     const updateEffects = effects.init(scene, particleTexture);

@@ -5,7 +5,7 @@ import { HitBox } from './hit_box';
 import ObjectPool from '../ObjectPool';
 import effects from '../visualEffects/effects';
 
-const hitBoxPool = new ObjectPool<HitBox>(5, HitBox);
+const hitBoxPool = new ObjectPool(5, HitBox);
 const actionControllers = new Map<Entity, ActionController>();
 let deltaTime = 0;
 
@@ -22,25 +22,27 @@ const actions = {
         hitBox.listener.add('hit', (collidingBodies: CollisionBody[]) => {
             console.log('HIT - deal damage');
             hitBox.destroy();
+            effect2.position.copy(effect.position);
             effect.clear();
             effect2.render();
-            // ToDo async
+
+            // ToDo !!! async
             setTimeout(() => {
                 effect2.clear();
-            }, 2000);
+            }, 500);
 
             hitBoxPool.release(hitBox);
         });
         hitBox.listener.add('ttlExpired', () => {
             console.log('EXPIRY');
             effect.clear();
+            effect2.clear();
             // destroyed
             hitBoxPool.release(hitBox);
         });
 
         effect.position.y = 13;
-        // ToDo fix rotation
-        effect.rotation.y = actionController.owner.model.rotation.y;
+        effect.quaternion.copy(actionController.owner.model.quaternion);
         hitBox.visualEffect = effect;
         effect.render();
     },
